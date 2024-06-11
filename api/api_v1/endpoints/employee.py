@@ -1,16 +1,19 @@
 import asyncio
-from typing import Any, Optional
+from typing import Any, Dict, Optional
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from models.Employee import MACH_Employee as employeeModel
+from models.skills import Skills1
 import crud
 import deps
 from schemas.employee import EmployeeCreate
 from sqlalchemy import and_, or_
 from typing import List
 from schemas.employee import MACH_Employee
+from schemas.Employee_with_skills import EmployeeWithSkills,SkillBase
 router = APIRouter()
 employee_SUBREDDITS = ["employees", "easyemployees", "TopSecretemployees"]
 
@@ -74,6 +77,215 @@ async def read_employees(
     employees = query.all()
     return employees
 
+
+@router.get("/employees/{employee_id}", response_model=List[EmployeeWithSkills])
+def read_employee(
+    
+    db: Session = Depends(deps.get_db),
+    employee_id: Optional[UUID] = None,
+    python: Optional[int] = Query(None, description="Filter by Python skill rating"),
+    sql: Optional[int] = Query(None, description="Filter by SQL skill rating"),
+    excel: Optional[int] = Query(None, description="Filter by Excel skill rating"),
+    storyboarding: Optional[int] = Query(None, description="Filter by Storyboarding skill rating"),
+    result_orientation: Optional[int] = Query(None, description="Filter by result orientation"),
+    quality_focus: Optional[int] = Query(None, description="Filter by quality focus"),
+    effective_communication: Optional[int] = Query(None, description="Filter by effective communication"),
+    work_management_and_effectiveness: Optional[int] = Query(None, description="Filter by work management and effectiveness"),
+    client_centric: Optional[int] = Query(None, description="Filter by client centric"),
+    genai: Optional[int] = Query(None, description="Filter by GenAI"),
+    nuclios: Optional[int] = Query(None, description="Filter by NucliOS")
+
+):
+    # Fetch the employee
+    employees_query = db.query(employeeModel)
+
+    if employee_id is not None:
+        employees_query = employees_query.filter(employeeModel.user_id == employee_id)
+    
+    employees = employees_query.all()
+
+    if not employees:
+        raise HTTPException(status_code=404, detail="Employee(s) not found")
+
+    # Base query for skills
+    skills_query = db.query(Skills1)
+
+    if employee_id is not None:
+        skills_query = skills_query.filter(Skills1.user_id == employee_id)
+
+    # Apply dynamic filters
+    if python is not None:
+        skills_query = skills_query.filter(Skills1.python == python)
+    if sql is not None:
+        skills_query = skills_query.filter(Skills1.sql == sql)
+    if excel is not None:
+        skills_query = skills_query.filter(Skills1.excel == excel)
+    if storyboarding is not None:
+        skills_query = skills_query.filter(Skills1.storyboarding == storyboarding)
+    if result_orientation is not None:
+        skills_query = skills_query.filter(Skills1.result_orientation == result_orientation)
+    if quality_focus is not None:
+        skills_query = skills_query.filter(Skills1.quality_focus == quality_focus)
+    if effective_communication is not None:
+        skills_query = skills_query.filter(Skills1.effective_communication == effective_communication)
+    if work_management_and_effectiveness is not None:
+        skills_query = skills_query.filter(Skills1.work_management_and_effectiveness == work_management_and_effectiveness)
+    if client_centric is not None:
+        skills_query = skills_query.filter(Skills1.clientcentric == client_centric)
+    if genai is not None:
+        skills_query = skills_query.filter(Skills1.genai == genai)
+    if nuclios is not None:
+        skills_query = skills_query.filter(Skills1.nuclios == nuclios)
+
+    # Fetch the skills
+    skills = skills_query.all()
+
+    # Convert to Pydantic model
+    skills_map = {}
+    for skill in skills:
+        if skill.user_id not in skills_map:
+            skills_map[skill.user_id] = []
+        skills_map[skill.user_id].append(SkillBase(
+            Python=skill.python,
+            SQL=skill.sql,
+            Excel=skill.excel,
+            Storyboarding=skill.storyboarding,
+            result_orientation=skill.result_orientation,
+            quality_focus=skill.quality_focus,
+            effective_communication=skill.effective_communication,
+            work_management_and_effectiveness=skill.work_management_and_effectiveness,
+            client_centric=skill.clientcentric,
+            genai=skill.genai,
+            nuclios=skill.nuclios
+        ))
+
+
+    # Convert to Pydantic model
+    employees_with_skills = [
+        EmployeeWithSkills(
+            user_id=employee.user_id,
+            name=employee.name,
+            designation=employee.designation,
+            account=employee.account,
+            lead=employee.lead,
+            manager_name=employee.manager_name,
+            skills=skills_map.get(employee.user_id, [])
+        ) for employee in employees
+    ]
+
+    return employees_with_skills
+
+@router.get("/employees/", response_model=List[EmployeeWithSkills])
+def read_employees1(
+    db: Session = Depends(deps.get_db),
+    name: Optional[str] = Query(None, description="Filter by employee name"),
+    designation: Optional[str] = Query(None, description="Filter by employee designation"),
+    account: Optional[str] = Query(None, description="Filter by employee account"),
+    lead: Optional[str] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[str] = Query(None, description="Filter by employee manager name"),
+    python: Optional[int] = Query(None, description="Filter by Python skill rating"),
+    sql: Optional[int] = Query(None, description="Filter by SQL skill rating"),
+    excel: Optional[int] = Query(None, description="Filter by Excel skill rating"),
+    storyboarding: Optional[int] = Query(None, description="Filter by Storyboarding skill rating"),
+    result_orientation: Optional[int] = Query(None, description="Filter by result orientation"),
+    quality_focus: Optional[int] = Query(None, description="Filter by quality focus"),
+    effective_communication: Optional[int] = Query(None, description="Filter by effective communication"),
+    work_management_and_effectiveness: Optional[int] = Query(None, description="Filter by work management and effectiveness"),
+    client_centric: Optional[int] = Query(None, description="Filter by client centric"),
+    genai: Optional[int] = Query(None, description="Filter by GenAI"),
+    nuclios: Optional[int] = Query(None, description="Filter by NucliOS")
+):
+    # Base query for employees
+    employees_query = db.query(employeeModel)
+
+    # Apply filters for employees
+      
+    # Fetch the user_ids of filtered employees
+    # user_ids = [employee.user_id for employee in employees]
+
+    # Base query for skills
+    skills_query = db.query(Skills1)
+
+    if python is not None:
+        skills_query = skills_query.filter(Skills1.python == python)
+    if sql is not None:
+        skills_query = skills_query.filter(Skills1.sql == sql)
+    if excel is not None:
+        skills_query = skills_query.filter(Skills1.excel == excel)
+    if storyboarding is not None:
+        skills_query = skills_query.filter(Skills1.storyboarding == storyboarding)
+    if result_orientation is not None:
+        skills_query = skills_query.filter(Skills1.result_orientation == result_orientation)
+    if quality_focus is not None:
+        skills_query = skills_query.filter(Skills1.quality_focus == quality_focus)
+    if effective_communication is not None:
+        skills_query = skills_query.filter(Skills1.effective_communication == effective_communication)
+    if work_management_and_effectiveness is not None:
+        skills_query = skills_query.filter(Skills1.work_management_and_effectiveness == work_management_and_effectiveness)
+    if client_centric is not None:
+        skills_query = skills_query.filter(Skills1.clientcentric == client_centric)
+    if genai is not None:
+        skills_query = skills_query.filter(Skills1.genai == genai)
+    if nuclios is not None:
+        skills_query = skills_query.filter(Skills1.nuclios == nuclios)
+    
+    # Fetch the skills
+    skills = skills_query.all()
+
+    # Create a map from user_id to skills
+    skills_map = {}
+    for skill in skills:
+        if skill.user_id not in skills_map:
+            skills_map[skill.user_id] = []
+        skills_map[skill.user_id].append(SkillBase(
+            Python=skill.python,
+            SQL=skill.sql,
+            Excel=skill.excel,
+            Storyboarding=skill.storyboarding,
+            result_orientation=skill.result_orientation,
+            quality_focus=skill.quality_focus,
+            effective_communication=skill.effective_communication,
+            work_management_and_effectiveness=skill.work_management_and_effectiveness,
+            client_centric=skill.clientcentric,
+            genai=skill.genai,
+            nuclios=skill.nuclios
+        ))
+
+    user_ids = list(skills_map.keys())
+
+    # Base query for employees
+    employees_query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
+
+    if name is not None:
+        employees_query = employees_query.filter(employeeModel.name == name)
+    if designation is not None:
+        employees_query = employees_query.filter(employeeModel.designation == designation)
+    if account is not None:
+        employees_query = employees_query.filter(employeeModel.account == account)
+    if lead is not None:
+        employees_query = employees_query.filter(employeeModel.lead == lead)
+    if manager_name is not None:
+        employees_query = employees_query.filter(employeeModel.manager_name == manager_name)
+    
+    employees = employees_query.all()
+
+    if not employees:
+        raise HTTPException(status_code=404, detail="Employee(s) not found")  
+
+    # Convert to Pydantic model
+    employees_with_skills = [
+        EmployeeWithSkills(
+            user_id=employee.user_id,
+            name=employee.name,
+            designation=employee.designation,
+            account=employee.account,
+            lead=employee.lead,
+            manager_name=employee.manager_name,
+            skills=skills_map[employee.user_id]
+        ) for employee in employees
+    ]
+
+    return employees_with_skills
 
 # @router.get("/search/", status_code=200, response_model=employeeSearchResults)
 # def search_employees(
