@@ -28,7 +28,3 @@ class Employee1(MACH_Employee):
     class Config:
         orm_mode = True
 
-
-# Properties properties stored in DB
-class RecipeInDB(MACH_Employee):
-    pass

@@ -187,6 +187,7 @@ def read_employees1(
     sql: Optional[int] = Query(None, description="Filter by SQL skill rating"),
     excel: Optional[int] = Query(None, description="Filter by Excel skill rating"),
     storyboarding: Optional[int] = Query(None, description="Filter by Storyboarding skill rating"),
+    business_communication : Optional[int] = Query(None, description ="Filter by business communication"),
     result_orientation: Optional[int] = Query(None, description="Filter by result orientation"),
     quality_focus: Optional[int] = Query(None, description="Filter by quality focus"),
     effective_communication: Optional[int] = Query(None, description="Filter by effective communication"),
@@ -214,6 +215,8 @@ def read_employees1(
         skills_query = skills_query.filter(Skills1.excel == excel)
     if storyboarding is not None:
         skills_query = skills_query.filter(Skills1.storyboarding == storyboarding)
+    if business_communication is not None:
+        skills_query = skills_query.filter(Skills1.business_communication == business_communication)
     if result_orientation is not None:
         skills_query = skills_query.filter(Skills1.result_orientation == result_orientation)
     if quality_focus is not None:
@@ -231,6 +234,7 @@ def read_employees1(
     
     # Fetch the skills
     skills = skills_query.all()
+    # print(skills)
 
     # Create a map from user_id to skills
     skills_map = {}
@@ -242,13 +246,14 @@ def read_employees1(
             SQL=skill.sql,
             Excel=skill.excel,
             Storyboarding=skill.storyboarding,
-            result_orientation=skill.result_orientation,
-            quality_focus=skill.quality_focus,
-            effective_communication=skill.effective_communication,
-            work_management_and_effectiveness=skill.work_management_and_effectiveness,
-            client_centric=skill.clientcentric,
-            genai=skill.genai,
-            nuclios=skill.nuclios
+            BusinessCommunication=skill.business_communication,
+            Result_Orientation=skill.result_orientation,
+            Quality_Focus=skill.quality_focus,
+            Effective_Communication=skill.effective_communication,
+            Work_Management_effectiveness=skill.work_management_and_effectiveness,
+            ClientCentric=skill.clientcentric,
+            GenAI=skill.genai,
+            NucliOS=skill.nuclios
         ))
 
     user_ids = list(skills_map.keys())
