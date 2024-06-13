@@ -13,5 +13,6 @@ class MACH_Employee(Base):
     account = Column(String)
     lead = Column(String)
     manager_name = Column(String)
+    latest = Column(String)
     # skills = relationship("Skill", back_populates="employee")
     

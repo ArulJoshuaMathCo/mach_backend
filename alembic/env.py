@@ -2,7 +2,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from app.models.Employee import Base
+from models.Employee import Base
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -18,10 +18,9 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 PGHOST = 'codx-minerva.postgres.database.azure.com'
 PGUSER = 'db_user'
-PGPORT = 5432
 database = 'dap_session'
 password = 'p%%40ssw0rd'
-config.set_main_option("sqlalchemy.url", 'postgresql://{PGUSER}:{password}@{PGHOST}:{PGPORT}/{database}')
+config.set_main_option("sqlalchemy.url", 'postgresql://db_user:p%%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session')
 # from myapp import mymodel
 target_metadata = Base.metadata
 # target_metadata = None

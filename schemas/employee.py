@@ -13,6 +13,7 @@ class EmployeeBase(BaseModel):
     account: str
     lead: str
     manager_name: str
+    latest:str
     
 
 class EmployeeCreate(EmployeeBase):
