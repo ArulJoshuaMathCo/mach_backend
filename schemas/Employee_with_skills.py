@@ -5,11 +5,11 @@ from schemas.employee import EmployeeBase
 
 
 class SkillBase(BaseModel):
-    Python: Optional[int]
-    SQL: Optional[int]
-    Excel:Optional[int]
-    Storyboarding:Optional[int]
-    BusinessCommunication: Optional[int]
+    Python: Optional[int] = None
+    SQL: Optional[int]= None
+    Excel:Optional[int]= None
+    Storyboarding:Optional[int]= None
+    BusinessCommunication: Optional[int]= None
     # Deck_Making: Optional[int] = None
     # R: Optional[int] = None
     # Java: Optional[int] = None
@@ -228,13 +228,13 @@ class SkillBase(BaseModel):
     # Innovative_Thinking: Optional[int] = None
     # Curiosity_Learning_Agility: Optional[int] = None
     # Problem_Solving: Optional[int] = None
-    Result_Orientation: Optional[int]
-    Quality_Focus: Optional[int]
-    Effective_Communication: Optional[int]
-    Work_Management_effectiveness: Optional[int]
-    ClientCentric: Optional[int]
-    GenAI: Optional[int]
-    NucliOS: Optional[int]
+    # Result_Orientation: Optional[int]
+    # Quality_Focus: Optional[int]
+    # Effective_Communication: Optional[int]
+    # Work_Management_effectiveness: Optional[int]
+    # ClientCentric: Optional[int]
+    GenAI: Optional[int]= None
+    NucliOS: Optional[int]= None
 
 
     class Config:

@@ -3,7 +3,6 @@ from middleware.middleware import add_middlewares
 from api.api_v1.api import api_router
 
 
-
 app = FastAPI()
 add_middlewares(app)
 
