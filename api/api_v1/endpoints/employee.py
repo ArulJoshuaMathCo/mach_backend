@@ -338,16 +338,16 @@ async def sme_finder(
     # Base query for skills
     skills_query = db.query(Skills1)
 
-    if skills is not None and rating is not None:
+    if skill_name is not None and rating is not None:
         # Assuming skills are filtered based on the lowercase version of their names
         skill_column = getattr(Skills1, skills.lower(), None)
         if skill_column is not None:
             skills_query = skills_query.filter(skill_column == rating)
-    if skills is not None and rating is None:
+    if skill_name is not None and rating is None:
         skill_column = getattr(Skills1,skills.lower(),None)
         if skill_column is not None:
             skills_query = skills_query.filter(skill_column.isnot(None))
-    if skills is None and rating is not None:
+    if skill_name is None and rating is not None:
         # Construct OR condition for all columns of Skills1
         or_conditions = []
         for column in Skills1.__table__.columns:
