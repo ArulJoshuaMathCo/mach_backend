@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Json
 from db.session import engine
 from db.base_class import Base
@@ -13,7 +13,7 @@ class EmployeeBase(BaseModel):
     account: str
     lead: str
     manager_name: str
-    latest:str
+    latest:Optional[str] = None
     
 
 class EmployeeCreate(EmployeeBase):

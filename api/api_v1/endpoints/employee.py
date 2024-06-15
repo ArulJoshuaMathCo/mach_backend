@@ -56,6 +56,7 @@ async def get_only_employees(
     designation: str = Query(None, description="Filter by employee designation"),
     account: str = Query(None, description="Filter by employee account"),
     lead: str = Query(None, description="Filter by employee lead"),
+    latest: str = Query(None, description="filter by validated or not validated"),
     manager_name: str = Query(None, description="Filter by employee manager name"),
 ):
     filters = []
@@ -69,7 +70,8 @@ async def get_only_employees(
         filters.append(employeeModel.lead == lead)
     if manager_name:
         filters.append(employeeModel.manager_name == manager_name)
-
+    if latest:
+        filters.append(employeeModel.latest == latest)
     query = db.query(employeeModel)
     if filters:
         query = query.filter(and_(*filters))
@@ -437,9 +439,7 @@ async def replacement_finder(
     if validated:
         employees_query = employees_query.filter(employeeModel.latest == validated)
     
-    employees = employees_query.all()
-    if not employees:
-        raise HTTPException(status_code=404, detail="Employee(s) not found")
+    
 
     # Step 2: Filter Skills
     skills_query = db.query(Skills1)
@@ -474,7 +474,7 @@ async def replacement_finder(
         ))
 
     user_ids = list(skills_map.keys())
-    employees_query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
+    employees_query = employees_query.filter(employeeModel.user_id.in_(user_ids))
 
     employees = employees_query.all()
     if not employees:
