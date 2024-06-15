@@ -418,6 +418,115 @@ async def sme_finder(
 
     return employees_with_skills
 
+# @router.get("/replacement_finder/")
+# async def replacement_finder(
+#     db: Session = Depends(deps.get_db),
+#     name: Optional[str] = Query(None, description="Filter by employee name"),
+#     designation: Optional[str] = Query(None, description="Filter by employee designation"),
+#     account: Optional[str] = Query(None, description="Filter by employee account"),
+#     validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
+#     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
+#     rating: Optional[int] = Query(None, description="Filter by skill rating")
+# ):
+#     # Step 1: Filter Employees
+#     employees_query = db.query(employeeModel)
+#     if name:
+#         employees_query = employees_query.filter(employeeModel.name.ilike(f"%{name}%"))
+#     if designation:
+#         employees_query = employees_query.filter(employeeModel.designation.ilike(f"%{designation}%"))
+#     if account:
+#         employees_query = employees_query.filter(employeeModel.account.ilike(f"%{account}%"))
+#     if validated:
+#         employees_query = employees_query.filter(employeeModel.latest == validated)
+    
+    
+
+#     # Step 2: Filter Skills
+#     skills_query = db.query(Skills1)
+#     if skill_name:
+#         skill_column = getattr(Skills1, skill_name.lower(), None)
+#         if skill_column is not None:
+#             if rating is not None:
+#                 skills_query = skills_query.filter(skill_column == rating)
+#             else:
+#                 skills_query = skills_query.filter(skill_column.isnot(None))
+    
+#     skills = skills_query.all()
+
+#     # Step 3: Calculate Average Ratings for each employee
+#     skills_map = {}
+#     for skill in skills:
+#         if skill.user_id not in skills_map:
+#             skills_map[skill.user_id] = []
+#         skills_map[skill.user_id].append(SkillBase(
+#             Python=skill.python,
+#             SQL=skill.sql,
+#             Excel=skill.excel,
+#             Storyboarding=skill.storyboarding,
+#             BusinessCommunication=skill.business_communication,
+#             Result_Orientation=skill.result_orientation,
+#             Quality_Focus=skill.quality_focus,
+#             Effective_Communication=skill.effective_communication,
+#             Work_Management_effectiveness=skill.work_management_and_effectiveness,
+#             ClientCentric=skill.clientcentric,
+#             GenAI=skill.genai,
+#             NucliOS=skill.nuclios
+#         ))
+
+#     user_ids = list(skills_map.keys())
+#     employees_query = employees_query.filter(employeeModel.user_id.in_(user_ids))
+
+#     employees = employees_query.all()
+#     if not employees:
+#         raise HTTPException(status_code=404, detail="Employee(s) not found")
+
+#     employees_with_skills = []
+#     for employee in employees:
+#         employee_skills = skills_map.get(employee.user_id, [])
+#         filtered_skills = [
+#             {k: v for k, v in skill.dict().items() if v is not None} for skill in employee_skills
+#         ]
+#         total_skills_rated = sum(len(skill) for skill in filtered_skills)
+#         average_rating = (sum(
+#             value for skill in filtered_skills for value in skill.values()
+#         ) / total_skills_rated) if total_skills_rated > 0 else 0
+#         employees_with_skills.append({
+#             "user_id": employee.user_id,
+#             "name": employee.name,
+#             "designation": employee.designation,
+#             "account": employee.account,
+#             "lead": employee.lead,
+#             "manager_name": employee.manager_name,
+#             "validated": employee.latest,
+#             "skills": filtered_skills,
+#             "total_skills_rated": total_skills_rated,
+#             "average_rating": average_rating
+#         })
+
+#     # Step 4: Find the Nearest Match
+#     selected_employee = employees_with_skills[0]  # Assuming the first employee is the selected one
+#     selected_avg_rating = selected_employee['average_rating']
+
+#     nearest_matches = []
+#     for employee in employees_with_skills:
+#         if employee['average_rating'] >= selected_avg_rating:
+#             matching_skills = len(set(skill_name for skill in employee['skills'] for skill_name in skill.keys()))
+#             employee['matching_skills'] = matching_skills
+#             nearest_matches.append(employee)
+
+#     # Step 5: Calculate average rating for each skill
+#     skill_avg_ratings = {}
+#     for skill_column in Skills1.__table__.columns:
+#         if skill_column.name != 'user_id':
+#             avg_rating = db.query(func.avg(skill_column)).scalar()
+#             skill_avg_ratings[skill_column.name] = avg_rating
+
+#     return {
+#         "skill_avg_ratings": skill_avg_ratings,
+#         "nearest_matches": nearest_matches
+#     }
+
+from decimal import Decimal
 @router.get("/replacement_finder/")
 async def replacement_finder(
     db: Session = Depends(deps.get_db),
@@ -428,7 +537,6 @@ async def replacement_finder(
     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
     rating: Optional[int] = Query(None, description="Filter by skill rating")
 ):
-    # Step 1: Filter Employees
     employees_query = db.query(employeeModel)
     if name:
         employees_query = employees_query.filter(employeeModel.name.ilike(f"%{name}%"))
@@ -438,10 +546,7 @@ async def replacement_finder(
         employees_query = employees_query.filter(employeeModel.account.ilike(f"%{account}%"))
     if validated:
         employees_query = employees_query.filter(employeeModel.latest == validated)
-    
-    
-
-    # Step 2: Filter Skills
+    # Step 1: Filter Skills
     skills_query = db.query(Skills1)
     if skill_name:
         skill_column = getattr(Skills1, skill_name.lower(), None)
@@ -450,12 +555,17 @@ async def replacement_finder(
                 skills_query = skills_query.filter(skill_column == rating)
             else:
                 skills_query = skills_query.filter(skill_column.isnot(None))
-    
-    skills = skills_query.all()
+    elif rating is not None:
+        or_conditions = []
+        for column in Skills1.__table__.columns:
+            if column.name != 'user_id':  # Exclude user_id column from filtering
+                or_conditions.append(column == rating)
+        skills_query = skills_query.filter(or_(*or_conditions))
 
-    # Step 3: Calculate Average Ratings for each employee
+    filtered_skills = skills_query.all()
+
     skills_map = {}
-    for skill in skills:
+    for skill in filtered_skills:
         if skill.user_id not in skills_map:
             skills_map[skill.user_id] = []
         skills_map[skill.user_id].append(SkillBase(
@@ -473,8 +583,36 @@ async def replacement_finder(
             NucliOS=skill.nuclios
         ))
 
+
     user_ids = list(skills_map.keys())
-    employees_query = employees_query.filter(employeeModel.user_id.in_(user_ids))
+    employees_query_avg = employees_query.filter(employeeModel.user_id.in_(user_ids))
+
+    employees_average = employees_query_avg.all()
+    if not employees_average:
+        raise HTTPException(status_code=404, detail="Employee(s) not found")
+
+    user_ids = [employee.user_id for employee in employees_average]
+    # Step 2: Calculate Average Ratings for Each Skill (Filtered)
+    skill_avg_ratings = {}
+    for skill_column in Skills1.__table__.columns:
+        if skill_column.name != 'user_id':
+            avg_rating = db.query(func.avg(skill_column)).filter(
+                skill_column.isnot(None),
+                Skills1.user_id.in_(user_ids)
+            )
+            if skill_name:
+                avg_rating = avg_rating.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
+            
+            avg_rating = avg_rating.scalar()
+            if avg_rating is not None:
+                skill_avg_ratings[skill_column.name] = avg_rating
+            else:
+                skill_avg_ratings[skill_column.name] = Decimal(0)
+
+
+    # Step 3: Calculate Average Ratings and Total Skills Rated for Each Employee Using Filtered Skills
+    
+    employees_query = db.query(employeeModel)
 
     employees = employees_query.all()
     if not employees:
@@ -484,7 +622,7 @@ async def replacement_finder(
     for employee in employees:
         employee_skills = skills_map.get(employee.user_id, [])
         filtered_skills = [
-            {k: v for k, v in skill.dict().items() if v is not None} for skill in employee_skills
+            {k: v for k, v in skill.dict().items() if v is not None and v > 0} for skill in employee_skills
         ]
         total_skills_rated = sum(len(skill) for skill in filtered_skills)
         average_rating = (sum(
@@ -503,23 +641,16 @@ async def replacement_finder(
             "average_rating": average_rating
         })
 
-    # Step 4: Find the Nearest Match
-    selected_employee = employees_with_skills[0]  # Assuming the first employee is the selected one
-    selected_avg_rating = selected_employee['average_rating']
+    # Step 4: Calculate the Overall Average Rating of All Filtered Skills
+    overall_avg_rating = sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else 0
 
+    # Step 5: Find the Nearest Match Based on Overall Average Rating
     nearest_matches = []
     for employee in employees_with_skills:
-        if employee['average_rating'] >= selected_avg_rating:
+        if employee['average_rating'] >= overall_avg_rating:
             matching_skills = len(set(skill_name for skill in employee['skills'] for skill_name in skill.keys()))
             employee['matching_skills'] = matching_skills
             nearest_matches.append(employee)
-
-    # Step 5: Calculate average rating for each skill
-    skill_avg_ratings = {}
-    for skill_column in Skills1.__table__.columns:
-        if skill_column.name != 'user_id':
-            avg_rating = db.query(func.avg(skill_column)).scalar()
-            skill_avg_ratings[skill_column.name] = avg_rating
 
     return {
         "skill_avg_ratings": skill_avg_ratings,
