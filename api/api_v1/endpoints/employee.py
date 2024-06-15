@@ -340,11 +340,11 @@ async def sme_finder(
 
     if skill_name is not None and rating is not None:
         # Assuming skills are filtered based on the lowercase version of their names
-        skill_column = getattr(Skills1, skills.lower(), None)
+        skill_column = getattr(Skills1, skill_name.lower(), None)
         if skill_column is not None:
             skills_query = skills_query.filter(skill_column == rating)
     if skill_name is not None and rating is None:
-        skill_column = getattr(Skills1,skills.lower(),None)
+        skill_column = getattr(Skills1,skill_name.lower(),None)
         if skill_column is not None:
             skills_query = skills_query.filter(skill_column.isnot(None))
     if skill_name is None and rating is not None:
