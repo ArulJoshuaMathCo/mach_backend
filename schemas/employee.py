@@ -2,9 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Json
-from db.session import engine
+# from db.session import engine
 from db.base_class import Base
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 from uuid import UUID
 
 class EmployeeBase(BaseModel):
