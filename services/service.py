@@ -17,10 +17,10 @@ async def run_in_executor(db_func, *args):
 
 async def fetch_employees(
     db: AsyncSession,
-    name: Optional[str],
-    designation: Optional[str],
-    account: Optional[str],
-    lead: Optional[str],
+    name: Optional[str] = None,
+    designation: Optional[str]= None,
+    account: Optional[str]= None,
+    lead: Optional[str]= None,
     manager_name: Optional[str] = None,
     validated: Optional[str] = None
 ) -> List[Any]:
@@ -44,71 +44,52 @@ async def fetch_skills(
     skill_name: Optional[str],
     rating: Optional[int]
 ) -> List[Any]:
-    query = db.query(Skills1)
-    if skill_name:
+    skills_query = db.query(Skills1)
+
+    if skill_name is not None and rating is not None:
+        # Assuming skills are filtered based on the lowercase version of their names
         skill_column = getattr(Skills1, skill_name.lower(), None)
         if skill_column is not None:
-            if rating is not None:
-                query = query.filter(skill_column == rating)
-            else:
-                query = query.filter(skill_column.isnot(None))
-    elif rating is not None:
+            skills_query = skills_query.filter(skill_column == rating)
+    if skill_name is not None and rating is None:
+        skill_column = getattr(Skills1,skill_name.lower(),None)
+        if skill_column is not None:
+            skills_query = skills_query.filter(skill_column.isnot(None))
+    if skill_name is None and rating is not None:
+        # Construct OR condition for all columns of Skills1
         or_conditions = []
         for column in Skills1.__table__.columns:
             if column.name != 'user_id':  # Exclude user_id column from filtering
                 or_conditions.append(column == rating)
-        query = query.filter(or_(*or_conditions))
-    return await run_in_executor(query.all)
+        
+        # Apply the OR conditions to the query
+        skills_query = skills_query.filter(or_(*or_conditions))
+    return await run_in_executor(skills_query.all)
 
-async def map_skills(filtered_skills: List[Skills1]) -> Dict:
+async def map_skills(filtered_skills: List[Skills1],skill_name:Optional[str], rating:Optional[int]) -> Dict:
     skills_map = {}
     for skill in filtered_skills:
+        skill_data = {}
+        if skill.python is not None and (skill_name == 'python' or skill_name is None) and (rating is None or skill.python == rating):
+            skill_data['Python'] = skill.python
+        if skill.sql is not None and (skill_name == 'sql' or skill_name is None) and (rating is None or skill.sql == rating):
+            skill_data['SQL'] = skill.sql
+        if skill.excel is not None and (skill_name == 'excel' or skill_name is None) and (rating is None or skill.excel == rating):
+            skill_data['Excel'] = skill.excel
+        if skill.storyboarding is not None and (skill_name == 'storyboarding' or skill_name is None) and (rating is None or skill.storyboarding == rating):
+            skill_data['Storyboarding'] = skill.storyboarding
+        if skill.business_communication is not None and (skill_name == 'business_communication' or skill_name is None) and (rating is None or skill.business_communication == rating):
+            skill_data['BusinessCommunication'] = skill.business_communication
+        if skill.genai is not None and (skill_name == 'genai' or skill_name is None) and (rating is None or skill.genai == rating):
+            skill_data['GenAI'] = skill.genai
+        if skill.nuclios is not None and (skill_name == 'nuclios' or skill_name is None) and (rating is None or skill.nuclios == rating):
+            skill_data['NucliOS'] = skill.nuclios
+
         if skill.user_id not in skills_map:
             skills_map[skill.user_id] = []
-        skills_map[skill.user_id].append(SkillBase(
-            Python=skill.python,
-            SQL=skill.sql,
-            Excel=skill.excel,
-            Storyboarding=skill.storyboarding,
-            BusinessCommunication=skill.business_communication,
-            Result_Orientation=skill.result_orientation,
-            Quality_Focus=skill.quality_focus,
-            Effective_Communication=skill.effective_communication,
-            Work_Management_effectiveness=skill.work_management_and_effectiveness,
-            ClientCentric=skill.clientcentric,
-            GenAI=skill.genai,
-            NucliOS=skill.nuclios
-        ))
+        skills_map[skill.user_id].append(SkillBase(**skill_data))
     return skills_map
 
-async def fetch_employees_average(
-    db: AsyncSession,
-    user_ids: List[str]
-) -> List[Any]:
-    query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
-    return await run_in_executor(query.all)
-
-async def calculate_skill_avg_ratings(
-    db: AsyncSession,
-    user_ids: List[str],
-    skill_name: Optional[str]
-) -> Dict[str, Decimal]:
-    skill_avg_ratings = {}
-    for skill_column in Skills1.__table__.columns:
-        if skill_column.name != 'user_id':
-            avg_rating_query = db.query(func.avg(skill_column)).filter(
-                skill_column.isnot(None),
-                Skills1.user_id.in_(user_ids)
-            )
-            if skill_name:
-                avg_rating_query = avg_rating_query.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
-            
-            avg_rating = await run_in_executor(avg_rating_query.scalar)
-            if avg_rating is not None:
-                skill_avg_ratings[skill_column.name] = avg_rating
-            else:
-                skill_avg_ratings[skill_column.name] = Decimal(0)
-    return skill_avg_ratings
 
 async def process_employees_with_skills(
     employees: List[employeeModel],
@@ -137,18 +118,6 @@ async def process_employees_with_skills(
             "average_rating": average_rating
         })
     return employees_with_skills
-
-async def find_nearest_matches(
-    employees_with_skills: List[Dict[str, Any]],
-    overall_avg_rating: Decimal
-) -> List[Dict[str, Any]]:
-    nearest_matches = []
-    for employee in employees_with_skills:
-        if employee['average_rating'] >= overall_avg_rating:
-            matching_skills = len(set(skill_name for skill in employee['skills'] for skill_name in skill.keys()))
-            employee['matching_skills'] = matching_skills
-            nearest_matches.append(employee)
-    return nearest_matches
 
 async def fetch_employees_by_user_ids(
     db: AsyncSession,

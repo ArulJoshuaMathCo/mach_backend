@@ -16,8 +16,10 @@ from typing import List
 from schemas.employee import MACH_Employee
 from schemas.Employee_with_skills import SkillBase
 from services.service import (
-    fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, fetch_employees_average,
-    calculate_skill_avg_ratings, process_employees_with_skills, find_nearest_matches
+    fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills
+)
+from services.replacement_service import (
+    map_skills_rf, fetch_employees_average,calculate_skill_avg_ratings,find_nearest_matches
 )
 router = APIRouter()
 employee_SUBREDDITS = ["employees", "easyemployees", "TopSecretemployees"]
@@ -330,7 +332,7 @@ async def sme_finder(
         raise HTTPException(status_code=404, detail="Employee(s) not found")
 
     filtered_skills = await fetch_skills(db, skill_name, rating)
-    skills_map = await map_skills(filtered_skills)
+    skills_map = await map_skills(filtered_skills,skill_name,rating)
 
     user_ids = list(skills_map.keys())
     employees_with_filtered_skills = await fetch_employees_by_user_ids(db, user_ids)
@@ -452,7 +454,7 @@ async def sme_finder(
 
 @router.get("/replacement_finder/")
 async def replacement_finder(
-    db: Session = Depends(deps.get_db),
+    db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
     designation: Optional[str] = Query(None, description="Filter by employee designation"),
     account: Optional[str] = Query(None, description="Filter by employee account"),
@@ -465,7 +467,7 @@ async def replacement_finder(
         raise HTTPException(status_code=404, detail="Employee(s) not found")
 
     filtered_skills = await fetch_skills(db, skill_name, rating)
-    skills_map = await map_skills(filtered_skills)
+    skills_map = await map_skills_rf(filtered_skills)
 
     user_ids = list(skills_map.keys())
     employees_average = await fetch_employees_average(db, user_ids)
@@ -473,6 +475,7 @@ async def replacement_finder(
         raise HTTPException(status_code=404, detail="Employee(s) not found")
 
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids, skill_name)
+    employees = await fetch_employees(db)
     employees_with_skills = await process_employees_with_skills(employees, skills_map)
 
     overall_avg_rating = sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else 0
@@ -480,6 +483,7 @@ async def replacement_finder(
 
     return {
         "skill_avg_ratings": skill_avg_ratings,
+        "overall_average_rating":overall_avg_rating,
         "nearest_matches": nearest_matches
     }
 # @router.get("/search/", status_code=200, response_model=employeeSearchResults)
