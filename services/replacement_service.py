@@ -58,6 +58,8 @@ async def calculate_skill_avg_ratings(
             else:
                 skill_avg_ratings[skill_column.name] = Decimal(0)
     return skill_avg_ratings
+async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, Decimal]) -> Decimal:
+    return sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else Decimal(0)
 
 async def find_nearest_matches(
     employees_with_skills: List[Dict[str, Any]],

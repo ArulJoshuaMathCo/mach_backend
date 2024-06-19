@@ -5,16 +5,16 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm.session import Session
 from jose import jwt
 
-from app.models.user import User
-from app.core.config import settings
-from app.core.security import verify_password
+from models.user import User
+from core.config import settings
+from core.security import verify_password
 
 
 JWTPayloadMapping = MutableMapping[
     str, Union[datetime, bool, str, List[str], List[int]]
 ]
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 def authenticate(

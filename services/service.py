@@ -121,7 +121,8 @@ async def process_employees_with_skills(
 
 async def fetch_employees_by_user_ids(
     db: AsyncSession,
-    user_ids: List[str]
+    user_ids: List[str],
+    employee:Optional[str]=None
 ) -> List[Any]:
     query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
     return await run_in_executor(query.all)

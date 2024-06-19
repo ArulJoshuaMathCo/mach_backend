@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from middleware.middleware import add_middlewares
 from api.api_v1.api import api_router
-
+# from models.user import Base
+# from db.session import engine
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 add_middlewares(app)

@@ -1,6 +1,7 @@
 import pathlib
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, validator
+from pydantic import AnyHttpUrl,  EmailStr, field_validator
+from pydantic_settings import BaseSettings
 from typing import List, Optional, Union
 
 
@@ -9,8 +10,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    API_V1_STR: str = "/api/v1"
-    JWT_SECRET: str = "TEST_SECRET_DO_NOT_USE_IN_PROD"
+    API_V1_STR: str = "/"
+    JWT_SECRET: str = "b597ea124e1a892aa4a3852f08a5d04b84256ee50b413c55f82ac6570edd7658"
     ALGORITHM: str = "HS256"
 
     # 60 minutes * 24 hours * 8 days = 8 days
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     # "http://localhost:8080", "http://local.dockertoolbox.tiangolo.com"]'
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = ["http://localhost:3000"]
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
@@ -29,9 +30,9 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    SQLALCHEMY_DATABASE_URI: Optional[str] = "sqlite:///example.db"
-    FIRST_SUPERUSER: EmailStr = "admin@recipeapi.com"
-    FIRST_SUPERUSER_PW: str = "CHANGEME"
+    SQLALCHEMY_DATABASE_URI: Optional[str] = f"postgresql://db_user:p%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session"
+    FIRST_SUPERUSER: EmailStr = "aruljoshua@gmail.com"
+    FIRST_SUPERUSER_PW: str = "12345678"
 
     class Config:
         case_sensitive = True
