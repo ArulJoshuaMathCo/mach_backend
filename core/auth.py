@@ -45,18 +45,15 @@ def _create_token(
     sub: str,
 ) -> str:
     payload = {}
-    expire = datetime.utcnow() + lifetime
+    expire = datetime.now() + lifetime
     payload["type"] = token_type
-
     # https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3
     # The "exp" (expiration time) claim identifies the expiration time on
     # or after which the JWT MUST NOT be accepted for processing
     payload["exp"] = expire
-
     # The "iat" (issued at) claim identifies the time at which the
     # JWT was issued.
-    payload["iat"] = datetime.utcnow()
-
+    payload["iat"] = datetime.now()
     # The "sub" (subject) claim identifies the principal that is the
     # subject of the JWT
     payload["sub"] = str(sub)
