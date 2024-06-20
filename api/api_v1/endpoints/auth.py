@@ -8,7 +8,7 @@ import schemas
 from api import deps
 from core.auth import (
     authenticate,
-    create_access_token,
+    create_access_token,create_refresh_token
 )
 from models.user import User
 
@@ -29,6 +29,7 @@ def login(
 
     return {
         "access_token": create_access_token(sub=user.id),
+        "refresh_token": create_refresh_token(sub=user.id),
         "token_type": "bearer",
     }
 
@@ -62,3 +63,11 @@ def create_user_signup(
     user = crud.user.create(db=db, obj_in=user_in)
 
     return user
+'''
+Using scopes for authorization
+Refresh tokens
+Password resets
+Single Sign On (SSO)
+Adding custom data to the JWT payload
+JSON Web Encryption
+'''

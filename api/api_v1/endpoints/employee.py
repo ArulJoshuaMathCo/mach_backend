@@ -14,8 +14,11 @@ from sqlalchemy import and_, or_, func
 from sqlalchemy.future import select
 from typing import List
 from schemas.employee import MACH_Employee
+from schemas.replacement_finder import ReplacementFinderResponse
+from schemas.sme_finder import SmeFinder
+from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
-from services.service import (fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills)
+from services.service import (fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills,employees_with_Skills)
 from services.replacement_service import (calculate_overall_avg_rating, map_skills_rf, fetch_employees_average,calculate_skill_avg_ratings,find_nearest_matches)
 router = APIRouter()
 
@@ -53,7 +56,7 @@ async def get_only_employees(
     return employees
 
 
-@router.get("/talent_finder/")
+@router.get("/talent_finder/",response_model=List[TalentFinder])
 async def talent_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
@@ -78,7 +81,7 @@ async def talent_finder(
     employees_with_skills = await process_employees_with_skills(employees_with_filtered_skills, skills_map)
     return employees_with_skills
        
-@router.get("/sme_finder/")
+@router.get("/sme_finder/",response_model=List[SmeFinder])
 async def sme_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
@@ -101,10 +104,10 @@ async def sme_finder(
     employees_with_filtered_skills = await fetch_employees_by_user_ids(db, user_ids)
     if not employees_with_filtered_skills:
         raise HTTPException(status_code=404, detail="Employee(s) not found")
-    employees_with_skills = await process_employees_with_skills(employees_with_filtered_skills, skills_map)
+    employees_with_skills = await employees_with_Skills(employees_with_filtered_skills, skills_map)
     return employees_with_skills
 
-@router.get("/replacement_finder/")
+@router.get("/replacement_finder/",response_model=ReplacementFinderResponse)
 async def replacement_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),

@@ -119,6 +119,28 @@ async def process_employees_with_skills(
         })
     return employees_with_skills
 
+async def employees_with_Skills(
+        employees: List[employeeModel],
+    skills_map: Dict[str, List[SkillBase]]
+) -> List[Dict[str, Any]]:
+    employees_with_skills = []
+    for employee in employees:
+        employee_skills = skills_map.get(employee.user_id, [])
+        filtered_skills = [
+            {k: v for k, v in skill.dict().items() if v is not None and v > 0} for skill in employee_skills
+        ]
+        employees_with_skills.append({
+            "user_id": employee.user_id,
+            "name": employee.name,
+            "designation": employee.designation,
+            "account": employee.account,
+            "lead": employee.lead,
+            "manager_name": employee.manager_name,
+            "validated": employee.latest,
+            "skills": filtered_skills
+        })
+    return employees_with_skills
+
 async def fetch_employees_by_user_ids(
     db: AsyncSession,
     user_ids: List[str],

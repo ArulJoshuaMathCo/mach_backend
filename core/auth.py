@@ -30,12 +30,20 @@ def authenticate(
         return None
     return user
 
+def create_refresh_token(*,sub:str)->str:
+    return _create_token(
+        token_type="refreh_token",
+        lifetime=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        sub=sub,
+        secret=settings.JWT_REFRESH_SECRET
+    )
 
 def create_access_token(*, sub: str) -> str:
     return _create_token(
         token_type="access_token",
         lifetime=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         sub=sub,
+        secret = settings.JWT_SECRET
     )
 
 
@@ -43,6 +51,7 @@ def _create_token(
     token_type: str,
     lifetime: timedelta,
     sub: str,
+    secret:str
 ) -> str:
     payload = {}
     expire = datetime.now() + lifetime
@@ -57,4 +66,4 @@ def _create_token(
     # The "sub" (subject) claim identifies the principal that is the
     # subject of the JWT
     payload["sub"] = str(sub)
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, secret, algorithm=settings.ALGORITHM)
