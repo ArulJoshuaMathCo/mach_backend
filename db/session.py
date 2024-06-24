@@ -16,9 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 # database = 'dap_session'
 # password = 'p%%40ssw0rd'
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://db_user:p%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session"
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+# SQLALCHEMY_DATABASE_URL = f"postgresql://db_user:p%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session"
+SQLALCHEMY_DATABASE_URL= "sqlite:///./mach.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

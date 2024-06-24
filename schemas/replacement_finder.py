@@ -1,7 +1,7 @@
 from uuid import UUID
 from typing import List, Dict, Optional
 from pydantic import BaseModel
-from schemas.Employee_with_skills import SkillBase
+from schemas.skills import SkillsBase
 
 class ReplacementFinder(BaseModel):
     user_id: UUID
@@ -11,7 +11,7 @@ class ReplacementFinder(BaseModel):
     lead: str
     manager_name: str
     validated: Optional[str] = None
-    skills: List[SkillBase]
+    skills: List[SkillsBase]
     total_skills_rated: float
     average_rating: float
     matching_skills: float

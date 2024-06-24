@@ -18,8 +18,8 @@ from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.sme_finder import SmeFinder
 from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
-from services.service import (fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills,employees_with_Skills)
-from services.replacement_service import (calculate_overall_avg_rating, map_skills_rf, fetch_employees_average,calculate_skill_avg_ratings,find_nearest_matches)
+from services.service import (fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills,employees_with_Skills, process_employees_with_skills1)
+from services.replacement_service import *
 router = APIRouter()
 
 @router.get("/{employee_id}", status_code=200, response_model=EmployeeCreate)
@@ -56,7 +56,33 @@ async def get_only_employees(
     return employees
 
 
-@router.get("/talent_finder/",response_model=List[TalentFinder])
+# @router.get("/talent_finder/",response_model=List[TalentFinder])
+# async def talent_finder(
+#     db: AsyncSession = Depends(deps.get_db),
+#     name: Optional[str] = Query(None, description="Filter by employee name"),
+#     designation: Optional[str] = Query(None, description="Filter by employee designation"),
+#     account: Optional[str] = Query(None, description="Filter by employee account"),
+#     lead: Optional[str] = Query(None, description="Filter by employee lead"),
+#     manager_name: Optional[str] = Query(None, description="Filter by employee manager name"),
+#     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
+#     rating: Optional[int] = Query(None, description="Filter by skill rating")
+# ):
+#     employees = await fetch_employees(db, name, designation, account, lead, manager_name)
+#     if not employees:
+#         raise HTTPException(status_code=404, detail="Employee(s) not found") 
+#     filtered_skills = await fetch_skills(db, skill_name, rating)
+#     skills_map = await map_skills(filtered_skills,skill_name,rating)
+#     user_ids = list(skills_map.keys())
+#     employee_user_ids = [employee.user_id for employee in employees]
+#     user_ids = [user_id for user_id in skills_map.keys() if user_id in employee_user_ids]
+#     employees_with_filtered_skills = await fetch_employees_by_user_ids(db, user_ids)
+#     if not employees_with_filtered_skills:
+#         raise HTTPException(status_code=404, detail="Employee(s) not found")
+#     employees_with_skills = await process_employees_with_skills(employees_with_filtered_skills, skills_map)
+#     return employees_with_skills
+
+from sqlalchemy import select, join
+@router.get("/talent_finder/")
 async def talent_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
@@ -67,21 +93,34 @@ async def talent_finder(
     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
     rating: Optional[int] = Query(None, description="Filter by skill rating")
 ):
-    employees = await fetch_employees(db, name, designation, account, lead, manager_name)
-    if not employees:
-        raise HTTPException(status_code=404, detail="Employee(s) not found") 
-    filtered_skills = await fetch_skills(db, skill_name, rating)
-    skills_map = await map_skills(filtered_skills,skill_name,rating)
-    user_ids = list(skills_map.keys())
-    employee_user_ids = [employee.user_id for employee in employees]
-    user_ids = [user_id for user_id in skills_map.keys() if user_id in employee_user_ids]
-    employees_with_filtered_skills = await fetch_employees_by_user_ids(db, user_ids)
-    if not employees_with_filtered_skills:
-        raise HTTPException(status_code=404, detail="Employee(s) not found")
-    employees_with_skills = await process_employees_with_skills(employees_with_filtered_skills, skills_map)
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+
+    if name:
+        query = query.where(employeeModel.name.ilike(f"%{name}%"))
+    if designation:
+        query = query.where(employeeModel.designation.ilike(f"%{designation}%"))
+    if account:
+        query = query.where(employeeModel.account.ilike(f"%{account}%"))
+    if lead:
+        query = query.where(employeeModel.lead.ilike(f"%{lead}%"))
+    if manager_name:
+        query = query.where(employeeModel.manager_name.ilike(f"%{manager_name}%"))
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            if rating is not None:
+                query = query.where(skill_column == rating)
+            else:
+                query = query.where(skill_column.isnot(None))
+
+    result =db.execute(query)
+    rows =  result.scalars().all()
+
+    employees_with_skills = await process_employees_with_skills1(rows)
+
     return employees_with_skills
        
-@router.get("/sme_finder/",response_model=List[SmeFinder])
+@router.get("/sme_finder/")
 async def sme_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
@@ -107,7 +146,7 @@ async def sme_finder(
     employees_with_skills = await employees_with_Skills(employees_with_filtered_skills, skills_map)
     return employees_with_skills
 
-@router.get("/replacement_finder/",response_model=ReplacementFinderResponse)
+@router.get("/replacement_finder/")
 async def replacement_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[str] = Query(None, description="Filter by employee name"),
@@ -134,6 +173,74 @@ async def replacement_finder(
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating)
     return {"skill_avg_ratings": skill_avg_ratings,"overall_average_rating":overall_avg_rating,"nearest_matches": nearest_matches}
+
+# @router.get("/replacement_finder/")
+# async def replacement_finder(
+#     db: AsyncSession = Depends(deps.get_db),
+#     name: Optional[str] = Query(None, description="Filter by employee name"),
+#     designation: Optional[str] = Query(None, description="Filter by employee designation"),
+#     account: Optional[str] = Query(None, description="Filter by employee account"),
+#     validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
+#     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
+#     rating: Optional[int] = Query(None, description="Filter by skill rating")
+# ):
+#     # Fetch employees
+#     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+
+#     if name:
+#         query = query.where(employeeModel.name.ilike(f"%{name}%"))
+#     if designation:
+#         query = query.where(employeeModel.designation.ilike(f"%{designation}%"))
+#     if account:
+#         query = query.where(employeeModel.account.ilike(f"%{account}%"))
+#     if validated is not None:
+#         query = query.where(employeeModel.latest == validated)
+    
+#     result = db.execute(query)
+#     employees = result.scalars().all()
+    
+#     if not employees:
+#         raise HTTPException(status_code=404, detail="Employee(s) not found")
+
+#     # Fetch skills and filter if necessary
+#     skills_query = select(Skills1)
+#     if skill_name:
+#         skill_column = getattr(Skills1, skill_name.lower(), None)
+#         if skill_column is not None:
+#             skills_query = skills_query.where(skill_column.isnot(None))
+#             if rating is not None:
+#                 skills_query = skills_query.where(skill_column == rating)
+    
+#     skills_result = db.execute(skills_query)
+#     skills = skills_result.scalars().all()
+    
+#     # Map skills
+#     skills_map = {}
+#     for skill in skills:
+#         if skill.user_id not in skills_map:
+#             skills_map[skill.user_id] = []
+#         skills_map[skill.user_id].append(skill)
+
+#     user_ids = list(skills_map.keys())
+#     employee_user_ids = [employee.user_id for employee in employees]
+#     user_ids = [user_id for user_id in skills_map.keys() if user_id in employee_user_ids]
+
+#     # Calculate average skill ratings
+#     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids)
+    
+#     if not skill_avg_ratings:
+#         raise HTTPException(status_code=404, detail="No skill ratings found")
+
+#     employees_with_skills = await process_employees_with_skills(employees, skills_map)
+#     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
+#     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating)
+    
+#     return {
+#         "skill_avg_ratings": skill_avg_ratings,
+#         "overall_average_rating": overall_avg_rating,
+#         "nearest_matches": nearest_matches
+#     }
+
 
 ################################################################################################
 

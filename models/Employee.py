@@ -2,7 +2,11 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from db.base_class import Base
+from db.session import engine
+# Base.metadata.create_all(bind=engine)
 from sqlalchemy.orm import relationship
+from models.user import User
+from models.skills import Skills1
 
 
 class MACH_Employee(Base):
@@ -14,5 +18,7 @@ class MACH_Employee(Base):
     lead = Column(String)
     manager_name = Column(String)
     latest = Column(String)
-    # skills = relationship("Skill", back_populates="employee")
+    submitter_id = Column(Integer, ForeignKey("user.id"), nullable=True, default=1) 
+    skills = relationship("Skills1", back_populates="employee")
+    submitter= relationship("User", back_populates="employees")
     

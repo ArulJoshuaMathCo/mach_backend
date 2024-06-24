@@ -22,7 +22,9 @@ async def fetch_employees(
     account: Optional[str]= None,
     lead: Optional[str]= None,
     manager_name: Optional[str] = None,
-    validated: Optional[str] = None
+    validated: Optional[str] = None,
+    offset: int = 0,  # default offset is 0
+    limit: int = 100
 ) -> List[Any]:
     query = db.query(employeeModel)
     if name:
@@ -37,12 +39,15 @@ async def fetch_employees(
         query = query.filter(employeeModel.manager_name == manager_name)
     if validated:
         query = query.filter(employeeModel.latest == validated)
+    query = query.offset(offset).limit(limit)
     return await run_in_executor(query.all)
 
 async def fetch_skills(
     db: AsyncSession,
     skill_name: Optional[str],
-    rating: Optional[int]
+    rating: Optional[int],
+    offset: int = 0,  # default offset is 0
+    limit: int = 100
 ) -> List[Any]:
     skills_query = db.query(Skills1)
 
@@ -64,6 +69,7 @@ async def fetch_skills(
         
         # Apply the OR conditions to the query
         skills_query = skills_query.filter(or_(*or_conditions))
+    skills_query = skills_query
     return await run_in_executor(skills_query.all)
 
 async def map_skills(filtered_skills: List[Skills1],skill_name:Optional[str], rating:Optional[int]) -> Dict:
@@ -117,6 +123,45 @@ async def process_employees_with_skills(
             "total_skills_rated": total_skills_rated,
             "average_rating": average_rating
         })
+    return employees_with_skills
+
+
+async def process_employees_with_skills1(
+    employees: List[employeeModel]
+) -> List[Dict[str, Any]]:
+    employees_with_skills = []
+    for employee in employees:
+        total_skills_rated = 0
+        total_rating = 0
+        skills_data = {}
+
+        # Ensure employee.skills is loaded and not empty
+        if employee.skills:
+            # Assuming skills are stored in columns like 'python', 'sql', etc.
+            for skill_name in Skills1.__table__.columns.keys():
+                if skill_name != 'user_id':  # Exclude user_id column
+                    skill_value = getattr(employee.skills[0], skill_name.lower(), None)
+                    if skill_value is not None:  # Check if skill value is not None
+                        total_skills_rated += 1
+                        total_rating += skill_value
+                        skills_data[skill_name] = skill_value
+
+            average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
+        else:
+            average_rating = 0
+
+        employees_with_skills.append({
+            "user_id": employee.user_id,
+            "name": employee.name,
+            "designation": employee.designation,
+            "account": employee.account,
+            "lead": employee.lead,
+            "manager_name": employee.manager_name,
+            "skills_count": total_skills_rated,
+            "average_rating": average_rating,
+            "skills": employee.skills
+        })
+
     return employees_with_skills
 
 async def employees_with_Skills(

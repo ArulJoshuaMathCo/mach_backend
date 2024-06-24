@@ -6,7 +6,7 @@ from db.base_class import Base
 from uuid import UUID
  
 class SkillsBase(BaseModel):
-    user_id: UUID
+    # user_id: UUID
     Python: Optional[int] = None
     SQL: Optional[int] = None
     Excel: Optional[int] = None

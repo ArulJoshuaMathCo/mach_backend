@@ -10,10 +10,10 @@ class User(Base):
     surname = Column(String(256), nullable=True)
     email = Column(String, index=True, nullable=False)
     is_superuser = Column(Boolean, default=False)
-    # employees = relationship(
-    #     "Employee",
-    #     cascade="all,delete-orphan",
-    #     back_populates="submitter",
-    #     uselist=True,
-    # )
+    employees = relationship(
+        "MACH_Employee",
+        cascade="all,delete-orphan",
+        back_populates="submitter",
+        uselist=True,
+    )
     hashed_password = Column(String, nullable=False)
