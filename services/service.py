@@ -14,33 +14,72 @@ async def run_in_executor(db_func, *args):
     loop = asyncio.get_running_loop()
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, db_func, *args)
-
 async def fetch_employees(
     db: AsyncSession,
     name: Optional[str] = None,
     designation: Optional[str]= None,
     account: Optional[str]= None,
     lead: Optional[str]= None,
-    manager_name: Optional[str] = None,
-    validated: Optional[str] = None,
-    offset: int = 0,  # default offset is 0
-    limit: int = 100
-) -> List[Any]:
-    query = db.query(employeeModel)
+    manager_name: Optional[str]= None,
+    validated: Optional[str]= None,
+    skill_name: Optional[str]= None,
+    rating: Optional[int]= None,
+    page: int=1, page_size: int=10
+) -> List[employeeModel]:
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+
     if name:
-        query = query.filter(employeeModel.name == name)
+        query = query.where(employeeModel.name.ilike(f"%{name}%"))
     if designation:
-        query = query.filter(employeeModel.designation == designation)
+        query = query.where(employeeModel.designation.ilike(f"%{designation}%"))
     if account:
-        query = query.filter(employeeModel.account == account)
+        query = query.where(employeeModel.account.ilike(f"%{account}%"))
     if lead:
-        query = query.filter(employeeModel.lead == lead)
+        query = query.where(employeeModel.lead.ilike(f"%{lead}%"))
     if manager_name:
-        query = query.filter(employeeModel.manager_name == manager_name)
+        query = query.where(employeeModel.manager_name.ilike(f"%{manager_name}%"))
     if validated:
-        query = query.filter(employeeModel.latest == validated)
-    query = query.offset(offset).limit(limit)
-    return await run_in_executor(query.all)
+        query = query.where(employeeModel.latest.ilike(f"%{validated}%"))
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            if rating is not None:
+                query = query.where(skill_column == rating)
+            else:
+                query = query.where(skill_column.isnot(None))
+    paginated_query = paginate(query, page, page_size)
+    result = db.execute(paginated_query)
+    return result.scalars().all()
+
+def paginate(query, page: int, page_size: int):
+    return query.offset((page - 1) * page_size).limit(page_size)
+
+# async def fetch_employees(
+#     db: AsyncSession,
+#     name: Optional[str] = None,
+#     designation: Optional[str]= None,
+#     account: Optional[str]= None,
+#     lead: Optional[str]= None,
+#     manager_name: Optional[str] = None,
+#     validated: Optional[str] = None,
+#     offset: int = 0,  # default offset is 0
+#     limit: int = 100
+# ) -> List[Any]:
+#     query = db.query(employeeModel)
+#     if name:
+#         query = query.filter(employeeModel.name == name)
+#     if designation:
+#         query = query.filter(employeeModel.designation == designation)
+#     if account:
+#         query = query.filter(employeeModel.account == account)
+#     if lead:
+#         query = query.filter(employeeModel.lead == lead)
+#     if manager_name:
+#         query = query.filter(employeeModel.manager_name == manager_name)
+#     if validated:
+#         query = query.filter(employeeModel.latest == validated)
+#     query = query.offset(offset).limit(limit)
+#     return await run_in_executor(query.all)
 
 async def fetch_skills(
     db: AsyncSession,

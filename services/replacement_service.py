@@ -132,7 +132,11 @@ async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> f
     total_skills = len(skill_avg_ratings)
     return total_rating / total_skills if total_skills > 0 else 0
 
-async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float) -> List[Dict[str, Any]]:
+async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float,page: int=1,
+    page_size: int=5) -> List[Dict[str, Any]]:
     # Example implementation for finding nearest matches based on average rating
     employees_with_skills.sort(key=lambda x: abs(x['average_rating'] - overall_avg_rating))
-    return employees_with_skills[:5]  # Return top 5 nearest matches
+    start_index = (page - 1) * page_size
+    end_index = start_index + page_size
+
+    return employees_with_skills[start_index:end_index]  # Return top 5 nearest matches
