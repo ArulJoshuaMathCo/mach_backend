@@ -136,7 +136,7 @@ async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], over
     page_size: int=5) -> List[Dict[str, Any]]:
     # Example implementation for finding nearest matches based on average rating
     employees_with_skills.sort(key=lambda x: abs(x['average_rating'] - overall_avg_rating))
-    start_index = (page - 1) * page_size
-    end_index = start_index + page_size
+    # start_index = (page - 1) * page_size
+    # end_index = start_index + page_size
 
-    return employees_with_skills[start_index:end_index]  # Return top 5 nearest matches
+    return employees_with_skills[:]  # Return top 5 nearest matches
