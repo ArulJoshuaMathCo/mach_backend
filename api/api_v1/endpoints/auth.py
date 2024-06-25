@@ -1,9 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm.session import Session
 import crud
+import crud.crud_token
 import schemas
 from api import deps
 from core.auth import (
@@ -11,7 +12,9 @@ from core.auth import (
     create_access_token,create_refresh_token
 )
 from models.user import User
-
+from models.token import TokenData
+from sqlalchemy.future import select
+from core.auth_bearer import jwt_bearer
 router = APIRouter()
 
 
@@ -26,6 +29,12 @@ def login(
     user = authenticate(email=form_data.username, password=form_data.password, db=db)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    access_token = create_access_token(sub=user.id)
+    refresh_token = create_refresh_token(sub=user.id)
+
+    token_in = TokenData(id=user.id, token=access_token, refresh_token=refresh_token, is_active=True)
+    crud.crud_token.token.create(db=db, token_in=token_in)
 
     return {
         "access_token": create_access_token(sub=user.id),
@@ -33,7 +42,21 @@ def login(
         "token_type": "bearer",
     }
 
+@router.post("/logout")
+async def logout(token: str = Depends(jwt_bearer), db: Session = Depends(deps.get_db)):
+    # Fetch the token data
+    result = db.execute(select(TokenData).where(TokenData.token == token))
+    token_data = result.scalars().first()
+    
+    if token_data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Token not found")
 
+    # Set is_active to False
+    token_data.is_active = False
+    db.add(token_data)
+    db.commit()
+
+    return {"msg": "Successfully logged out"}
 @router.get("/me", response_model=schemas.User)
 def read_users_me(current_user: User = Depends(deps.get_current_user)):
     """

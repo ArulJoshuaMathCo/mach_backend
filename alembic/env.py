@@ -16,11 +16,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-PGHOST = 'codx-minerva.postgres.database.azure.com'
-PGUSER = 'db_user'
-database = 'dap_session'
-password = 'p%%40ssw0rd'
-config.set_main_option("sqlalchemy.url", 'postgresql://db_user:p%%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session')
+# config.set_main_option("sqlalchemy.url", 'postgresql://db_user:p%%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session')
+config.set_main_option("sqlalchemy.url", 'sqlite:///./mach.db')
 # from myapp import mymodel
 target_metadata = Base.metadata
 # target_metadata = None

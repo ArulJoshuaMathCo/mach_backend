@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from models.Employee import MACH_Employee as employeeModel
 from models.skills import Skills1
+from models.user import User
 import crud
-import deps
+from api import deps
 from schemas.employee import EmployeeCreate
 from sqlalchemy import and_, or_, func
 from sqlalchemy.future import select
@@ -93,11 +94,12 @@ async def talent_finder(
     validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
     rating: Optional[int] = Query(None, description="Filter by skill rating"),
-    page: int = Query(1, description="Page number"),
-    page_size: int = Query(10, description="Number of items per page")
+    # page: int = Query(1, description="Page number"),
+    # page_size: int = Query(10, description="Number of items per page")
 ):
     rows =await fetch_employees(
-        db, name, designation, account, lead, manager_name, validated, skill_name, rating, page, page_size
+        db, name, designation, account, lead, manager_name, validated, skill_name, rating,
+        
     )
     employees_with_skills = await process_employees_with_skills1(rows)
     return employees_with_skills
@@ -165,18 +167,19 @@ async def replacement_finder(
     validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
     skill_name: Optional[str] = Query(None, description="Filter by skill name"),
     rating: Optional[int] = Query(None, description="Filter by skill rating"),
-    page: int = Query(1, description="Page number"),
-    page_size: int = Query(10, description="Number of items per page")
+    # page: int = Query(1, description="Page number"),
+    # page_size: int = Query(10, description="Number of items per page")
+    # current_user: User = Depends(deps.get_current_active_superuser),
 ):
     # Fetch employees
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
     if name:
-        query = query.where(employeeModel.name.ilike(f"%{name}%"))
+        query = query.where(employeeModel.name==name)
     if designation:
-        query = query.where(employeeModel.designation.ilike(f"%{designation}%"))
+        query = query.where(employeeModel.designation==designation)
     if account:
-        query = query.where(employeeModel.account.ilike(f"%{account}%"))
+        query = query.where(employeeModel.account==account)
     if validated is not None:
         query = query.where(employeeModel.latest == validated)
 
@@ -200,7 +203,7 @@ async def replacement_finder(
     employees= result.scalars().all()
     employees_with_skills = await process_employees_with_skills1(employees)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
-    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,page,page_size)
+    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,)
     
     return {
         "skill_avg_ratings": skill_avg_ratings,

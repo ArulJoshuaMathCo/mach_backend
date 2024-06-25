@@ -16,4 +16,5 @@ class User(Base):
         back_populates="submitter",
         uselist=True,
     )
+    role = Column(String, default="user") 
     hashed_password = Column(String, nullable=False)

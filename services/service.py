@@ -24,7 +24,7 @@ async def fetch_employees(
     validated: Optional[str]= None,
     skill_name: Optional[str]= None,
     rating: Optional[int]= None,
-    page: int=1, page_size: int=10
+    # page: int=1, page_size: int=10
 ) -> List[employeeModel]:
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 

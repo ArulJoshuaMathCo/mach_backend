@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
-    SQLALCHEMY_DATABASE_URI: Optional[str] = f"postgresql://db_user:p%40ssw0rd@codx-minerva.postgres.database.azure.com:5432/dap_session"
+    SQLALCHEMY_DATABASE_URI: Optional[str] = f"sqlite:///./mach.db"
     FIRST_SUPERUSER: EmailStr = "aruljoshua@gmail.com"
     FIRST_SUPERUSER_PW: str = "12345678"
 
