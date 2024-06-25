@@ -18,7 +18,7 @@ from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.sme_finder import SmeFinder
 from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
-from services.service import (fetch_employees, fetch_employees_by_user_ids, fetch_skills, map_skills, process_employees_with_skills,employees_with_Skills, process_employees_with_skills1)
+from services.service import *
 from services.replacement_service import *
 router = APIRouter()
 

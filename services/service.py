@@ -29,17 +29,17 @@ async def fetch_employees(
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
     if name:
-        query = query.where(employeeModel.name.ilike(f"%{name}%"))
+        query = query.where(employeeModel.name==name)
     if designation:
-        query = query.where(employeeModel.designation.ilike(f"%{designation}%"))
+        query = query.where(employeeModel.designation==designation)
     if account:
-        query = query.where(employeeModel.account.ilike(f"%{account}%"))
+        query = query.where(employeeModel.account==account)
     if lead:
-        query = query.where(employeeModel.lead.ilike(f"%{lead}%"))
+        query = query.where(employeeModel.lead==lead)
     if manager_name:
-        query = query.where(employeeModel.manager_name.ilike(f"%{manager_name}%"))
+        query = query.where(employeeModel.manager_name==manager_name)
     if validated:
-        query = query.where(employeeModel.latest.ilike(f"%{validated}%"))
+        query = query.where(employeeModel.latest==validated)
     if skill_name:
         skill_column = getattr(Skills1, skill_name.lower(), None)
         if skill_column is not None:
@@ -47,8 +47,8 @@ async def fetch_employees(
                 query = query.where(skill_column == rating)
             else:
                 query = query.where(skill_column.isnot(None))
-    paginated_query = paginate(query, page, page_size)
-    result = db.execute(paginated_query)
+    
+    result = db.execute(query)
     return result.scalars().all()
 
 def paginate(query, page: int, page_size: int):
@@ -198,7 +198,7 @@ async def process_employees_with_skills1(
             "manager_name": employee.manager_name,
             "skills_count": total_skills_rated,
             "average_rating": average_rating,
-            "skills": employee.skills
+            "skills": skills_data
         })
 
     return employees_with_skills
