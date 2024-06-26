@@ -40,23 +40,31 @@ from services.service import run_in_executor
 async def calculate_skill_avg_ratings(
     db: Session,
     user_ids: List[str],
-    skill_name: Optional[str]
+    skill_names: Optional[List[str]]
 ) -> Dict[str, Decimal]:
     skill_avg_ratings = {}
+
     for skill_column in Skills1.__table__.columns:
         if skill_column.name != 'user_id':
             avg_rating_query = db.query(func.avg(skill_column)).filter(
                 skill_column.isnot(None),
                 Skills1.user_id.in_(user_ids)
             )
-            if skill_name:
-                avg_rating_query = avg_rating_query.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
+
+            if skill_names:
+                skill_conditions = [
+                    getattr(Skills1, skill_name.lower(), None).isnot(None)
+                    for skill_name in skill_names if getattr(Skills1, skill_name.lower(), None) is not None
+                ]
+                if skill_conditions:
+                    avg_rating_query = avg_rating_query.filter(or_(*skill_conditions))
             
             avg_rating = await run_in_executor(avg_rating_query.scalar)
             if avg_rating is not None:
                 skill_avg_ratings[skill_column.name] = avg_rating
             else:
                 skill_avg_ratings[skill_column.name] = float(0)
+
     return skill_avg_ratings
 # async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
 #     return sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else float(0)
@@ -132,37 +140,36 @@ async def process_employees_with_skills(
 #     return skill_avg_ratings
 async def rf_fetch_employees(
     db: Session,
-    name: Optional[str] = None,
-    designation: Optional[str]= None,
-    account: Optional[str]= None,
-    validated: Optional[str]= None,
-    skill_name: Optional[str]= None,
-    rating: Optional[int]= None,
+    name: Optional[List[str]] = None,
+    designation: Optional[List[str]]= None,
+    account: Optional[List[str]]= None,
+    validated: Optional[List[str]]= None,
+    skill_name: Optional[List[str]]= None,
+    rating: Optional[List[int]]= None,
     # page: int=1, page_size: int=10
 ) -> List[employeeModel]:
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
     if name:
-        query = query.where(employeeModel.name==name)
+        query = query.where(employeeModel.name.in_(name))
     if designation:
-        query = query.where(employeeModel.designation==designation)
+        query = query.where(employeeModel.designation.in_(designation))
     if account:
-        query = query.where(employeeModel.account==account)
+        query = query.where(employeeModel.account.in_(account))
     if validated:
-        query = query.where(employeeModel.latest==validated)
+        query = query.where(employeeModel.latest.in_(validated))
     if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            if rating is not None:
-                query = query.where(skill_column == rating)
-            else:
-                query = query.where(skill_column.isnot(None))
-    if skill_name is None and rating is not None:
+        # Create OR conditions for skill names
+        skill_conditions = [getattr(Skills1, skill.lower(), None).isnot(None) for skill in skill_name if getattr(Skills1, skill.lower(), None) is not None]
+        if skill_conditions:
+            query = query.where(or_(*skill_conditions))
+    if rating is not None:
         # Construct OR condition for all columns of Skills1
         or_conditions = []
         for column in Skills1.__table__.columns:
             if column.name != 'user_id':  # Exclude user_id column from filtering
-                or_conditions.append(column == rating)
+                for rate in rating:
+                    or_conditions.append(column == rate)
         
         # Apply the OR conditions to the query
         query = query.filter(or_(*or_conditions))

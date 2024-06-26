@@ -86,14 +86,14 @@ from sqlalchemy import select, join
 @router.get("/talent_finder/")
 async def talent_finder(
     db: AsyncSession = Depends(deps.get_db),
-    name: Optional[str] = Query(None, description="Filter by employee name"),
-    designation: Optional[str] = Query(None, description="Filter by employee designation"),
-    account: Optional[str] = Query(None, description="Filter by employee account"),
-    lead: Optional[str] = Query(None, description="Filter by employee lead"),
-    manager_name: Optional[str] = Query(None, description="Filter by employee manager name"),
-    validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
-    skill_name: Optional[str] = Query(None, description="Filter by skill name"),
-    rating: Optional[int] = Query(None, description="Filter by skill rating"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+    rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
 ):
@@ -161,12 +161,12 @@ async def talent_finder(
 @router.get("/replacement_finder/")
 async def replacement_finder(
     db: AsyncSession = Depends(deps.get_db),
-    name: Optional[str] = Query(None, description="Filter by employee name"),
-    designation: Optional[str] = Query(None, description="Filter by employee designation"),
-    account: Optional[str] = Query(None, description="Filter by employee account"),
-    validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
-    skill_name: Optional[str] = Query(None, description="Filter by skill name"),
-    rating: Optional[int] = Query(None, description="Filter by skill rating"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+    rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),

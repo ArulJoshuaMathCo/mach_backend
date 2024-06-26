@@ -16,43 +16,42 @@ async def run_in_executor(db_func, *args):
         return await loop.run_in_executor(pool, db_func, *args)
 async def fetch_employees(
     db: AsyncSession,
-    name: Optional[str] = None,
-    designation: Optional[str]= None,
-    account: Optional[str]= None,
-    lead: Optional[str]= None,
-    manager_name: Optional[str]= None,
-    validated: Optional[str]= None,
-    skill_name: Optional[str]= None,
-    rating: Optional[int]= None,
+    name: Optional[List[str]]=None,
+    designation: Optional[List[str]]= None,
+    account: Optional[List[str]]= None,
+    lead: Optional[List[str]]= None,
+    manager_name: Optional[List[str]]= None,
+    validated: Optional[List[str]]= None,
+    skill_name: Optional[List[str]]= None,
+    rating: Optional[List[int]]= None,
     # page: int=1, page_size: int=10
 ) -> List[employeeModel]:
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
     if name:
-        query = query.where(employeeModel.name==name)
+        query = query.where(employeeModel.name.in_(name))
     if designation:
-        query = query.where(employeeModel.designation==designation)
+        query = query.where(employeeModel.designation.in_(designation))
     if account:
-        query = query.where(employeeModel.account==account)
+        query = query.where(employeeModel.account.in_(account))
     if lead:
-        query = query.where(employeeModel.lead==lead)
+        query = query.where(employeeModel.lead.in_(lead))
     if manager_name:
-        query = query.where(employeeModel.manager_name==manager_name)
+        query = query.where(employeeModel.manager_name.in_(manager_name))
     if validated:
-        query = query.where(employeeModel.latest==validated)
+        query = query.where(employeeModel.latest.in_(validated))
     if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            if rating is not None:
-                query = query.where(skill_column == rating)
-            else:
-                query = query.where(skill_column.isnot(None))
-    if skill_name is None and rating is not None:
+        # Create OR conditions for skill names
+        skill_conditions = [getattr(Skills1, skill.lower(), None).isnot(None) for skill in skill_name if getattr(Skills1, skill.lower(), None) is not None]
+        if skill_conditions:
+            query = query.where(or_(*skill_conditions))
+    if rating is not None:
         # Construct OR condition for all columns of Skills1
         or_conditions = []
         for column in Skills1.__table__.columns:
             if column.name != 'user_id':  # Exclude user_id column from filtering
-                or_conditions.append(column == rating)
+                for rate in rating:
+                    or_conditions.append(column == rate)
         
         # Apply the OR conditions to the query
         query = query.filter(or_(*or_conditions))
@@ -176,8 +175,8 @@ async def process_employees_with_skills(
 
 async def process_employees_with_skills1(
     employees: List[employeeModel],
-    rating:Optional[int]=None,
-    skill_query_name:Optional[str]= None
+    rating:Optional[List[int]]=None,
+    skill_query_name:Optional[List[str]]= None
 ) -> List[Dict[str, Any]]:
     employees_with_skills = []
     for employee in employees:
@@ -193,8 +192,22 @@ async def process_employees_with_skills1(
                     if skill_name != 'user_id' and skill_name != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
                         total_skills_rated += 1
                         total_rating += skill_value
-                        if rating is None or rating==skill_value and skill_query_name is None or skill_query_name == skill_name:
-                            skills_data[skill_name] = skill_value
+                        if rating and skill_query_name is not None:
+                            for skill in skill_query_name:
+                                for rate in rating:
+                                    if rate is None or rate==skill_value and skill is None or skill == skill_name:
+                                        skills_data[skill_name] = skill_value
+                        elif rating is not None and skill_query_name is None:
+                            for rate in rating:
+                                if rate is None or rate==skill_value:
+                                    skills_data[skill_name] = skill_value
+                        elif skill_query_name is not None and rating is None:
+                            for skill in skill_query_name:
+                                if skill is None or skill == skill_name:
+                                    skills_data[skill_name] = skill_value
+                        else:
+                            if rating is None and skill_query_name is None:
+                                skills_data[skill_name] = skill_value
 
             average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
         else:
