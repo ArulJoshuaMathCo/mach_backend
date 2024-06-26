@@ -101,7 +101,7 @@ async def talent_finder(
         db, name, designation, account, lead, manager_name, validated, skill_name, rating,
         
     )
-    employees_with_skills = await process_employees_with_skills1(rows)
+    employees_with_skills = await process_employees_with_skills1(rows,rating,skill_name)
     return employees_with_skills
        
 # @router.get("/sme_finder/")

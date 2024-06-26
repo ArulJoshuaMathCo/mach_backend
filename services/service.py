@@ -47,6 +47,15 @@ async def fetch_employees(
                 query = query.where(skill_column == rating)
             else:
                 query = query.where(skill_column.isnot(None))
+    if skill_name is None and rating is not None:
+        # Construct OR condition for all columns of Skills1
+        or_conditions = []
+        for column in Skills1.__table__.columns:
+            if column.name != 'user_id':  # Exclude user_id column from filtering
+                or_conditions.append(column == rating)
+        
+        # Apply the OR conditions to the query
+        query = query.filter(or_(*or_conditions))
     
     result = db.execute(query)
     return result.scalars().all()
@@ -166,7 +175,9 @@ async def process_employees_with_skills(
 
 
 async def process_employees_with_skills1(
-    employees: List[employeeModel]
+    employees: List[employeeModel],
+    rating:Optional[int]=None,
+    skill_query_name:Optional[str]= None
 ) -> List[Dict[str, Any]]:
     employees_with_skills = []
     for employee in employees:
@@ -176,14 +187,14 @@ async def process_employees_with_skills1(
 
         # Ensure employee.skills is loaded and not empty
         if employee.skills:
-            # Assuming skills are stored in columns like 'python', 'sql', etc.
-            for skill_name in Skills1.__table__.columns.keys():
-                if skill_name != 'user_id':  # Exclude user_id column
-                    skill_value = getattr(employee.skills[0], skill_name.lower(), None)
-                    if skill_value is not None:  # Check if skill value is not None
+            # Iterate over the attributes of the skills object
+            for skill in employee.skills:
+                for skill_name, skill_value in skill.__dict__.items():
+                    if skill_name != 'user_id' and skill_name != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
                         total_skills_rated += 1
                         total_rating += skill_value
-                        skills_data[skill_name] = skill_value
+                        if rating is None or rating==skill_value and skill_query_name is None or skill_query_name == skill_name:
+                            skills_data[skill_name] = skill_value
 
             average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
         else:
