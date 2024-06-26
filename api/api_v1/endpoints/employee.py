@@ -171,36 +171,13 @@ async def replacement_finder(
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),
 ):
-    # Fetch employees
-    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
-
-    if name:
-        query = query.where(employeeModel.name==name)
-    if designation:
-        query = query.where(employeeModel.designation==designation)
-    if account:
-        query = query.where(employeeModel.account==account)
-    if validated is not None:
-        query = query.where(employeeModel.latest == validated)
-
-    # Fetch skills and filter if necessary
-    if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            query = query.where(skill_column.isnot(None))
-            if rating is not None:
-                query = query.where(skill_column == rating)    
-    result = db.execute(query)
-    rows = result.scalars().all()    
+    rows = await fetch_employees(db, name, designation, account,validated, skill_name, rating,)    
     user_ids = [employee.user_id for employee in rows]
     # Calculate average skill ratings
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids,skill_name)
-    
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
-    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
-    result = db.execute(query)
-    employees= result.scalars().all()
+    employees= await fetch_employees(db)    
     employees_with_skills = await process_employees_with_skills1(employees)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,)
@@ -211,7 +188,26 @@ async def replacement_finder(
         "nearest_matches": nearest_matches
     }
 
+# Fetch employees replacement_finder
+    # query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
+    # if name:
+    #     query = query.where(employeeModel.name==name)
+    # if designation:
+    #     query = query.where(employeeModel.designation==designation)
+    # if account:
+    #     query = query.where(employeeModel.account==account)
+    # if validated is not None:
+    #     query = query.where(employeeModel.latest == validated)
+
+    # # Fetch skills and filter if necessary
+    # if skill_name:
+    #     skill_column = getattr(Skills1, skill_name.lower(), None)
+    #     if skill_column is not None:
+    #         query = query.where(skill_column.isnot(None))
+    #         if rating is not None:
+    #             query = query.where(skill_column == rating)    
+    # result = db.execute(query)
 ################################################################################################
 
 # @router.get("/replacement_finder/")
