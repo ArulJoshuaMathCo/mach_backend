@@ -171,7 +171,7 @@ async def replacement_finder(
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),
 ):
-    rows = await fetch_employees(db, name, designation, account,validated, skill_name, rating,)    
+    rows = await rf_fetch_employees(db, name, designation, account,validated, skill_name, rating,)    
     user_ids = [employee.user_id for employee in rows]
     # Calculate average skill ratings
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids,skill_name)

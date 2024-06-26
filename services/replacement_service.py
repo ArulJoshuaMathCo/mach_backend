@@ -130,7 +130,45 @@ async def process_employees_with_skills(
 #         skill_avg_ratings[skill_name] = skill_totals[skill_name] / skill_counts[skill_name]
 
 #     return skill_avg_ratings
+async def rf_fetch_employees(
+    db: Session,
+    name: Optional[str] = None,
+    designation: Optional[str]= None,
+    account: Optional[str]= None,
+    validated: Optional[str]= None,
+    skill_name: Optional[str]= None,
+    rating: Optional[int]= None,
+    # page: int=1, page_size: int=10
+) -> List[employeeModel]:
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
+    if name:
+        query = query.where(employeeModel.name==name)
+    if designation:
+        query = query.where(employeeModel.designation==designation)
+    if account:
+        query = query.where(employeeModel.account==account)
+    if validated:
+        query = query.where(employeeModel.latest==validated)
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            if rating is not None:
+                query = query.where(skill_column == rating)
+            else:
+                query = query.where(skill_column.isnot(None))
+    if skill_name is None and rating is not None:
+        # Construct OR condition for all columns of Skills1
+        or_conditions = []
+        for column in Skills1.__table__.columns:
+            if column.name != 'user_id':  # Exclude user_id column from filtering
+                or_conditions.append(column == rating)
+        
+        # Apply the OR conditions to the query
+        query = query.filter(or_(*or_conditions))
+    
+    result = db.execute(query)
+    return result.scalars().all()
 
 async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
     total_rating = sum(skill_avg_ratings.values())
