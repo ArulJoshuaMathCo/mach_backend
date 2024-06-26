@@ -188,6 +188,48 @@ async def replacement_finder(
         "nearest_matches": nearest_matches
     }
 
+@router.get("/employees_skill_screen/")
+async def employees_skill_screen(
+    db: AsyncSession = Depends(deps.get_db),
+    account: Optional[str] = Query(None, description="Filter by account"),
+    lead: Optional[str] = Query(None, description="Filter by lead"),
+    manager: Optional[str] = Query(None, description="Filter by manager"),
+    designation: Optional[str] = Query(None, description="Filter by designation"),
+    validated: Optional[str] = Query(None, description="Filter by validation"),
+    skill_name: Optional[str] = Query(None, description="Filter by skills"),
+    rating: Optional[int] = Query(None, description="Filter by rating")
+):
+    # Fetch employees
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+ 
+    if account:
+        query = query.where(employeeModel.account == account)
+    if lead:
+        query = query.where(employeeModel.lead == lead)
+    if manager:
+        query = query.where(employeeModel.manager_name == manager)
+    if designation:
+        query = query.where(employeeModel.designation == designation)
+    if validated:
+        query = query.where(employeeModel.latest == validated)
+ 
+    # Fetch skills and filter if necessary
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            query = query.where(skill_column.isnot(None))
+            if rating is not None:
+                query = query.where(skill_column == rating)
+   
+    result = db.execute(query)
+    rows = result.scalars().all()
+    user_ids = [employee.user_id for employee in rows]
+ 
+    # Calculate average skill ratings
+    skill_avg_ratings = await skill_avg_rating(db, user_ids, skill_name)
+   
+    return {"skill_avg_ratings": skill_avg_ratings}
+
 # Fetch employees replacement_finder
     # query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
