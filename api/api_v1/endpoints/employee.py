@@ -14,7 +14,7 @@ from schemas.employee import EmployeeCreate
 from sqlalchemy import and_, or_, func
 from sqlalchemy.future import select
 from typing import List
-from schemas.employee import MACH_Employee
+from schemas.employee import MACH_Employee,employeeSearchResults
 from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.sme_finder import SmeFinder
 from schemas.talent_finder import TalentFinder
@@ -171,14 +171,14 @@ async def replacement_finder(
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),
 ):
-    rows = await rf_fetch_employees(db, name, designation, account,validated, skill_name, rating,)    
+    rows = await rf_fetch_employees(db, name,)    
     user_ids = [employee.user_id for employee in rows]
     # Calculate average skill ratings
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids,skill_name)
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
-    employees= await fetch_employees(db)    
-    employees_with_skills = await process_employees_with_skills1(employees)
+    employees= await fetch_employees(db,designation=designation, account=account,validated=validated,skill_name=skill_name,rating=rating,)    
+    employees_with_skills = await process_employees_with_skills1(employees,rating=rating,skill_query_name=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,)
     
@@ -477,18 +477,18 @@ async def employees_skill_screen(
 #     return employees_with_skills
 
 
-# @router.get("/search/", status_code=200, response_model=employeeSearchResults)
-# def search_employees(
-#     *,
-#     keyword: str = Query(None, min_length=3, example="chicken"),
-#     max_results: Optional[int] = 10,
-#     db: Session = Depends(deps.get_db),
-# ) -> dict:
-#     """
-#     Search for employees based on label keyword
-#     """
-#     employees = crud.employee.get_multi(db=db, limit=max_results)
-#     results = filter(lambda employee: keyword.lower() in employee.label.lower(), employees)
+@router.get("/search/", status_code=200, response_model=employeeSearchResults)
+async def search_employees(
+    *,
+    keyword: str = Query(None, min_length=3, example="MACH"),
+    max_results: Optional[int] = 10,
+    db: Session = Depends(deps.get_db),
+) -> dict:
+    """
+    Search for employees based on label keyword
+    """
+    employees =await crud.employee.get_multi(db=db, limit=max_results)
+    results = filter(lambda employee: keyword.lower() in employee.name.lower(), employees)
 
-#     return {"results": list(results)}
+    return {"results": list(results)[:5]}
 
