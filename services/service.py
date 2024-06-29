@@ -280,6 +280,11 @@ async def process_employees_with_skills1(
             "account": employee.account,
             "lead": employee.lead,
             "manager_name": employee.manager_name,
+            "tenure":employee.tenure,
+            "iteration":employee.iteration,
+            "capabilities":employee.capabilities,
+            "serviceline_name":employee.serviceline_name,
+            "function":employee.function,
             "skills_count": total_skills_rated,
             "average_rating": average_rating,
             "skills": skills_data
