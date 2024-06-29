@@ -71,20 +71,26 @@ async def calculate_skill_avg_ratings(
 
 async def find_nearest_matches(
     employees_with_skills: List[Dict[str, Any]],
-    overall_avg_rating: Decimal
+    overall_avg_rating: Decimal,
+    skill_avg_rating: Dict[str, float]
 ) -> List[Dict[str, Any]]:
+    import json
+    with open('services/skill_mapping.json', 'r') as file:
+        skill_mapping = json.load(file)
+
+
     nearest_matches = []
     for employee in employees_with_skills:
         if employee['average_rating'] >= overall_avg_rating:
-            if isinstance(employee['skills'], dict):
-                matching_skills = len(set(skill_name for skill_name in employee['skills'].keys()))
-            elif isinstance(employee['skills'], list):
-                matching_skills = len(set(skill_name for skill in employee['skills'] for skill_name in skill.keys()))
-            else:
-                matching_skills = 0
+            matching_skills = 0
+            for skill_name, skill_value in employee['skills'].items():
+                mapped_skill_name = skill_mapping.get(skill_name.lower())
+                if mapped_skill_name and skill_value >= skill_avg_rating.get(mapped_skill_name, 0):
+                    matching_skills += 1
             employee['matching_skills'] = matching_skills
             nearest_matches.append(employee)
     return nearest_matches
+
 async def process_employees_with_skills(
     employees: List[employeeModel],
     skills_map: Dict[str, List[Skills1]]

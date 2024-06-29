@@ -22,6 +22,11 @@ async def fetch_employees(
     lead: Optional[List[str]]= None,
     manager_name: Optional[List[str]]= None,
     validated: Optional[List[str]]= None,
+    tenure: Optional[List[str]]= None,
+    iteration: Optional[List[int]]= None,
+    capabilities: Optional[List[str]]= None,
+    serviceline_name: Optional[List[str]]= None,
+    function: Optional[List[str]]= None,
     skill_name: Optional[List[str]]= None,
     rating: Optional[List[int]]= None,
     # page: int=1, page_size: int=10
@@ -39,7 +44,17 @@ async def fetch_employees(
     if manager_name:
         query = query.where(employeeModel.manager_name.in_(manager_name))
     if validated:
-        query = query.where(employeeModel.latest.in_(validated))
+        query = query.where(employeeModel.validation.in_(validated))
+    if tenure:
+        query = query.where(employeeModel.tenure.in_(validated))
+    if iteration:
+        query = query.where(employeeModel.iteration.in_(validated))
+    if capabilities:
+        query = query.where(employeeModel.capabilities.in_(validated))
+    if serviceline_name:
+        query = query.where(employeeModel.serviceline_name.in_(validated))
+    if function:
+        query = query.where(employeeModel.function.in_(validated))
     if skill_name is not None and rating is not None:
         # Create AND conditions for both skill name and rating
         skill_rating_conditions = [

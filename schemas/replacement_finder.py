@@ -6,13 +6,12 @@ from schemas.skills import SkillsBase
 class ReplacementFinder(BaseModel):
     user_id: UUID
     name: str
-    designation: str
-    account: str
-    lead: str
-    manager_name: str
-    validated: Optional[str] = None
-    skills: List[SkillsBase]
-    total_skills_rated: float
+    designation: Optional[str] = None
+    account: Optional[str] = None
+    lead: Optional[str] = None
+    manager_name: Optional[str] = None
+    skills: Dict[str,int]
+    skills_count: int
     average_rating: float
     matching_skills: float
 

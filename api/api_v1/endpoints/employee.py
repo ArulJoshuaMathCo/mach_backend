@@ -92,13 +92,18 @@ async def talent_finder(
     lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
     manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
     validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    tenure:Optional[List[str]] = Query(None, description="Filter by tenure"),
+    iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
+    capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
+    function:Optional[List[str]] = Query(None, description="Filter by function"),
     skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
     rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
 ):
     rows =await fetch_employees(
-        db, name, designation, account, lead, manager_name, validated, skill_name, rating,
+        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,function, skill_name, rating,
         
     )
     employees_with_skills = await process_employees_with_skills1(rows,rating,skill_name)
@@ -180,15 +185,16 @@ async def replacement_finder(
     employees= await fetch_employees(db,designation=designation, account=account,validated=validated,skill_name=skill_name,rating=rating,)    
     employees_with_skills = await process_employees_with_skills1(employees,rating=rating,skill_query_name=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
-    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,)
+    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,skill_avg_rating=skill_avg_ratings)
     
     return {
         "skill_avg_ratings": skill_avg_ratings,
         "overall_average_rating": overall_avg_rating,
         "nearest_matches": nearest_matches
     }
+from schemas.employee_skill_screen import EmployeeSkillScreen
 
-@router.get("/employees_skill_screen/")
+@router.get("/employees_skill_screen/",response_model=EmployeeSkillScreen)
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
     account: Optional[str] = Query(None, description="Filter by account"),
@@ -196,6 +202,7 @@ async def employees_skill_screen(
     manager: Optional[str] = Query(None, description="Filter by manager"),
     designation: Optional[str] = Query(None, description="Filter by designation"),
     validated: Optional[str] = Query(None, description="Filter by validation"),
+    
     skill_name: Optional[str] = Query(None, description="Filter by skills"),
     rating: Optional[int] = Query(None, description="Filter by rating")
 ):
