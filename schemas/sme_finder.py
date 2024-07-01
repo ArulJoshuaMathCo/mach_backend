@@ -12,3 +12,8 @@ class SmeFinder(BaseModel):
     manager_name: str
     validated: Optional[str] = None
     skills: List[SkillBase]
+
+class SkillDetail(BaseModel):
+    skill_name: str
+    average_rating: float
+    number_of_people: int

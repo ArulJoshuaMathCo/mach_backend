@@ -11,12 +11,12 @@ from models.user import User
 import crud
 from api import deps
 from schemas.employee import EmployeeCreate
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, case
 from sqlalchemy.future import select
 from typing import List
 from schemas.employee import MACH_Employee
 from schemas.replacement_finder import ReplacementFinderResponse
-from schemas.sme_finder import SmeFinder
+from schemas.sme_finder import SmeFinder, SkillDetail
 from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
 from services.service import *
@@ -210,6 +210,117 @@ async def replacement_finder(
         "overall_average_rating": overall_avg_rating,
         "nearest_matches": nearest_matches
     }
+
+
+@router.get("/employees_skill_screen/")
+async def employees_skill_screen(
+    db: AsyncSession = Depends(deps.get_db),
+    account: Optional[str] = Query(None, description="Filter by account"),
+    lead: Optional[str] = Query(None, description="Filter by lead"),
+    manager: Optional[str] = Query(None, description="Filter by manager"),
+    designation: Optional[str] = Query(None, description="Filter by designation"),
+    validated: Optional[str] = Query(None, description="Filter by validation"),
+    skill_name: Optional[str] = Query(None, description="Filter by skills"),
+    rating: Optional[int] = Query(None, description="Filter by rating")
+):
+    # Fetch employees
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+
+    if account:
+        query = query.where(employeeModel.account == account)
+    if lead:
+        query = query.where(employeeModel.lead == lead)
+    if manager:
+        query = query.where(employeeModel.manager_name == manager)
+    if designation:
+        query = query.where(employeeModel.designation == designation)
+    if validated:
+        query = query.where(employeeModel.latest == validated)
+
+    # Fetch skills and filter if necessary
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            query = query.where(skill_column.isnot(None))
+            if rating is not None:
+                query = query.where(skill_column == rating)
+    
+    result = db.execute(query)
+    rows = result.scalars().all()
+    user_ids = [employee.user_id for employee in rows]
+
+    # Calculate average skill ratings
+    skill_avg_ratings = await skill_avg_rating(db, user_ids, skill_name)
+    
+    return {"skill_avg_ratings": skill_avg_ratings}
+
+@router.get("/employee_statistics/")
+async def employee_statistics(
+    db: AsyncSession = Depends(deps.get_db)
+):
+    total_employees = await get_total_employees(db)
+    account_percentages = await get_account_percentages(db, total_employees)
+    skill_percentages = await get_skill_percentages(db, total_employees)
+    skill_rating_percentages = await get_skill_rating_percentages(db, total_employees)
+    
+    return {
+        "total_employees": total_employees,
+        "account_percentages": account_percentages,
+        "skill_percentages": skill_percentages,
+        "skill_rating_percentages": skill_rating_percentages
+    }
+
+async def get_total_employees(db: AsyncSession) -> int:
+    result = db.execute(select(func.count(employeeModel.user_id)))
+    total_employees = result.scalar()
+    return total_employees
+
+async def get_account_percentages(db: AsyncSession, total_employees: int) -> List[Dict[str, Any]]:
+    account_percentages = []
+    result = db.execute(select(employeeModel.account, func.count(employeeModel.user_id)).group_by(employeeModel.account))
+    account_counts = result.all()
+    for account, count in account_counts:
+        account_percentages.append({
+            "account": account,
+            "count": count,
+            "percentage": (count / total_employees) * 100
+        })
+    return account_percentages
+
+async def get_skill_percentages(db: AsyncSession, total_employees: int) -> List[Dict[str, Any]]:
+    skill_percentages = []
+    for skill_column in Skills1.__table__.columns:
+        if skill_column.name != 'user_id':
+            result = db.execute(select(func.count(skill_column)).filter(skill_column.isnot(None)))
+            skill_count = result.scalar()
+            skill_percentages.append({
+                "skill": skill_column.name,
+                "count": skill_count,
+                "percentage": (skill_count / total_employees) * 100
+            })
+    return skill_percentages
+
+async def get_skill_rating_percentages(db: AsyncSession, total_employees: int) -> List[Dict[str, Any]]:
+    skill_rating_percentages = []
+    for skill_column in Skills1.__table__.columns:
+        if skill_column.name != 'user_id':
+            result = db.execute(
+                select(skill_column, func.count(skill_column))
+                .filter(skill_column.isnot(None))
+                .group_by(skill_column)
+            )
+            rating_counts = result.all()
+            for rating, count in rating_counts:
+                skill_rating_percentages.append({
+                    "skill": skill_column.name,
+                    "rating": rating,
+                    "count": count,
+                    "percentage": (count / total_employees) * 100
+                })
+    return skill_rating_percentages
+
+
+
 
 
 ################################################################################################
@@ -453,4 +564,3 @@ async def replacement_finder(
 #     results = filter(lambda employee: keyword.lower() in employee.label.lower(), employees)
 
 #     return {"results": list(results)}
-
