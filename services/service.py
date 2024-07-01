@@ -520,12 +520,11 @@ async def fetch_employees_by_user_ids(
 
 async def skill_avg_rating(
     db: AsyncSession,
-    user_ids: List[str],
-    skill_name: Optional[str]
+    user_ids: List[str]
 ) -> List[Dict[str, Optional[float]]]:
     skill_avg_ratings = []
     for skill_column in Skills1.__table__.columns:
-        if skill_column.name != 'user_id':
+        if skill_column.name != 'EMP ID':
             avg_rating_query = select(
                 func.avg(skill_column).label('average_rating'),
                 func.count(skill_column).label('employee_count')
@@ -533,8 +532,6 @@ async def skill_avg_rating(
                 skill_column.isnot(None),
                 Skills1.user_id.in_(user_ids)
             )
-            if skill_name:
-                avg_rating_query = avg_rating_query.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
             
             result = db.execute(avg_rating_query)
             avg_rating, employee_count = result.one_or_none()
