@@ -10,13 +10,8 @@ from models.skills import Skills1
 from models.user import User
 import crud
 from api import deps
-<<<<<<< HEAD
 from schemas.employee import EmployeeCreate, MACH_Employee
 from sqlalchemy import and_, or_, func
-=======
-from schemas.employee import EmployeeCreate
-from sqlalchemy import and_, or_, func, case
->>>>>>> 66a43808ab0e311d37579e315ed1a8c006ebeef8
 from sqlalchemy.future import select
 from typing import List
 from schemas.employee import MACH_Employee,employeeSearchResults
@@ -262,7 +257,6 @@ async def employees_skill_screen(
         "skill_avg_ratings": skill_avg_ratings
     }
 
-<<<<<<< HEAD
 @router.post("/", status_code=201, response_model=MACH_Employee)
 def create_employee(
     *,
@@ -304,8 +298,6 @@ def create_employee(
     #         if rating is not None:
     #             query = query.where(skill_column == rating)    
     # result = db.execute(query)
-=======
->>>>>>> 66a43808ab0e311d37579e315ed1a8c006ebeef8
 ################################################################################################
 
 # @router.get("/replacement_finder/")
