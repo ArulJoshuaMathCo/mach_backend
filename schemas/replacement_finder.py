@@ -4,16 +4,22 @@ from pydantic import BaseModel
 from schemas.skills import SkillsBase
 
 class ReplacementFinder(BaseModel):
-    user_id: UUID
+    user_id: str
     name: str
     designation: Optional[str] = None
     account: Optional[str] = None
     lead: Optional[str] = None
     manager_name: Optional[str] = None
-    skills: Dict[str,int]
+    tenure: Optional[str] = None
+    iteration: Optional[int] = None
+    capabilities: Optional[str] = None
+    serviceline_name: Optional[str] = None
+    functions: Optional[str] = None
     skills_count: int
     average_rating: float
+    skills: Dict[str, int]
     matching_skills: float
+    matched_skills:Dict[str, int]
 
 class ReplacementFinderResponse(BaseModel):
     skill_avg_ratings: Dict[str, float]

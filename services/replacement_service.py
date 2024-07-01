@@ -45,7 +45,7 @@ async def calculate_skill_avg_ratings(
     skill_avg_ratings = {}
 
     for skill_column in Skills1.__table__.columns:
-        if skill_column.name != 'user_id':
+        if skill_column.name != 'EMP ID':
             avg_rating_query = db.query(func.avg(skill_column)).filter(
                 skill_column.isnot(None),
                 Skills1.user_id.in_(user_ids)
@@ -78,18 +78,19 @@ async def find_nearest_matches(
     with open('services/skill_mapping.json', 'r') as file:
         skill_mapping = json.load(file)
 
-    match={}
+    
     nearest_matches = []
     for employee in employees_with_skills:
         if employee['average_rating'] >= overall_avg_rating:
             matching_skills = 0
+            match={}
             for skill_name, skill_value in employee['skills'].items():
                 mapped_skill_name = skill_mapping.get(skill_name.lower())
                 if mapped_skill_name and skill_value >= skill_avg_rating.get(mapped_skill_name, 0):
                     matching_skills += 1
-                    match[mapped_skill_name]=skill_value
+                    match[skill_name]=skill_value
             employee['matching_skills'] = matching_skills
-            employee["matched skills"]=match
+            employee["matched_skills"]=match
             nearest_matches.append(employee)
     return nearest_matches
 

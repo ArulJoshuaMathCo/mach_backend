@@ -8,20 +8,23 @@ from db.base_class import Base
 from uuid import UUID
 
 class EmployeeBase(BaseModel):
+    user_id: str
     name: str
     designation: Optional[str] = None
     account: Optional[str] = None
     lead: Optional[str] = None
     manager_name: Optional[str] = None
-    latest:Optional[str] = None
+    tenure: Optional[str] = None
+    iteration: Optional[int] = None
+    capabilities: Optional[str] = None
+    serviceline_name: Optional[str] = None
+    functions: Optional[str] = None
     
 
 class EmployeeCreate(EmployeeBase):
-    user_id: UUID
+    skills: Optional[Dict[str,int]] = None
 
 class MACH_Employee(EmployeeBase):
-    user_id: UUID
-
     class Config:
         orm_mode = True
 

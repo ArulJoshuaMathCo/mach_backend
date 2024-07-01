@@ -10,7 +10,7 @@ from models.skills import Skills1
 from models.user import User
 import crud
 from api import deps
-from schemas.employee import EmployeeCreate
+from schemas.employee import EmployeeCreate, MACH_Employee
 from sqlalchemy import and_, or_, func
 from sqlalchemy.future import select
 from typing import List
@@ -89,7 +89,7 @@ async def get_only_employees(
 #     return employees_with_skills
 
 from sqlalchemy import select, join
-@router.get("/talent_finder/")
+@router.get("/talent_finder/",response_model=List[TalentFinder])
 async def talent_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[List[str]] = Query(None, description="Filter by employee name"),
@@ -169,26 +169,33 @@ async def talent_finder(
 #     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating)
 #     return {"skill_avg_ratings": skill_avg_ratings,"overall_average_rating":overall_avg_rating,"nearest_matches": nearest_matches}
 
-@router.get("/replacement_finder/")
+@router.get("/replacement_finder/",response_model=ReplacementFinderResponse)
 async def replacement_finder(
     db: AsyncSession = Depends(deps.get_db),
     name: Optional[List[str]] = Query(None, description="Filter by employee name"),
     designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
     account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
     validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    tenure:Optional[List[str]] = Query(None, description="Filter by tenure"),
+    iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
+    capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
+    functions:Optional[List[str]] = Query(None, description="Filter by function"),
     skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
     rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),
 ):
-    rows = await rf_fetch_employees(db, name,)    
+    rows = await fetch_employees(db, name,)    
     user_ids = [employee.user_id for employee in rows]
     # Calculate average skill ratings
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids,skill_name)
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
-    employees= await fetch_employees(db,designation=designation, account=account,validated=validated,skill_name=skill_name,rating=rating,)    
+    employees= await fetch_employees(db,designation=designation, account=account,validated=validated,lead=lead,manager_name=manager_name,tenure=tenure,iteration=iteration,capabilities=capabilities,serviceline_name=serviceline_name,function=functions ,skill_name=skill_name,rating=rating,)    
     employees_with_skills = await process_employees_with_skills1(employees,rating=rating,skill_query_name=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
     nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,skill_avg_rating=skill_avg_ratings)
@@ -242,6 +249,27 @@ async def employees_skill_screen(
     skill_avg_ratings = await skill_avg_rating(db, user_ids, skill_name)
    
     return {"skill_avg_ratings": skill_avg_ratings}
+
+@router.post("/", status_code=201, response_model=MACH_Employee)
+def create_employee(
+    *,
+    employee_in: EmployeeCreate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_manager),
+) -> dict:
+    """
+    Create a new employee in the database.
+    """
+    employee = crud.employee.create(db=db, obj_in=employee_in.model_dump(exclude={'skills'}))
+    
+    # If skills data is provided, create the Skills1 record
+    if employee_in.skills:
+        skills_data = employee_in.skills.model_dump()
+        skills_data['user_id'] = employee.user_id
+        crud.skills.create(db=db, obj_in=skills_data)
+
+    return employee
+
 
 # Fetch employees replacement_finder
     # query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
