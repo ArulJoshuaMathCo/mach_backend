@@ -10,13 +10,18 @@ from models.skills import Skills1
 from models.user import User
 import crud
 from api import deps
+<<<<<<< HEAD
 from schemas.employee import EmployeeCreate, MACH_Employee
 from sqlalchemy import and_, or_, func
+=======
+from schemas.employee import EmployeeCreate
+from sqlalchemy import and_, or_, func, case
+>>>>>>> 66a43808ab0e311d37579e315ed1a8c006ebeef8
 from sqlalchemy.future import select
 from typing import List
 from schemas.employee import MACH_Employee,employeeSearchResults
 from schemas.replacement_finder import ReplacementFinderResponse
-from schemas.sme_finder import SmeFinder
+from schemas.sme_finder import SmeFinder, SkillDetail
 from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
 from services.service import *
@@ -210,46 +215,54 @@ from schemas.employee_skill_screen import EmployeeSkillScreen
 @router.get("/employees_skill_screen/",response_model=EmployeeSkillScreen)
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
-    account: Optional[str] = Query(None, description="Filter by account"),
+    serviceline: Optional[str] = Query(None, description="Filter by serviceline"),
     lead: Optional[str] = Query(None, description="Filter by lead"),
     manager: Optional[str] = Query(None, description="Filter by manager"),
+    capabilities: Optional[str] = Query(None, description="Filter by capabilities"),
     designation: Optional[str] = Query(None, description="Filter by designation"),
-    validated: Optional[str] = Query(None, description="Filter by validation"),
-    
-    skill_name: Optional[str] = Query(None, description="Filter by skills"),
+    validation: Optional[str] = Query(None, description="Filter by validation"),
+    iteration: Optional[str] = Query(None, description="Filter by iteration"),
     rating: Optional[int] = Query(None, description="Filter by rating")
 ):
     # Fetch employees
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
  
-    if account:
-        query = query.where(employeeModel.account == account)
+    if serviceline:
+        query = query.where(employeeModel.serviceline_name == serviceline)
     if lead:
         query = query.where(employeeModel.lead == lead)
     if manager:
         query = query.where(employeeModel.manager_name == manager)
+    if capabilities:
+        query = query.where(employeeModel.capabilities == capabilities)
     if designation:
         query = query.where(employeeModel.designation == designation)
-    if validated:
-        query = query.where(employeeModel.latest == validated)
- 
-    # Fetch skills and filter if necessary
-    if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            query = query.where(skill_column.isnot(None))
-            if rating is not None:
-                query = query.where(skill_column == rating)
+    if validation:
+        query = query.where(employeeModel.validation == validation)
+    if iteration:
+        query = query.where(employeeModel.iteration == iteration)
    
     result = db.execute(query)
     rows = result.scalars().all()
     user_ids = [employee.user_id for employee in rows]
- 
-    # Calculate average skill ratings
-    skill_avg_ratings = await skill_avg_rating(db, user_ids, skill_name)
-   
-    return {"skill_avg_ratings": skill_avg_ratings}
 
+    # Calculate average skill ratings
+    skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
+    # Calculate overall average rating and number of people
+    total_employee_count = sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
+    if total_employee_count > 0:
+        overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / total_employee_count
+    else:
+        overall_average = 0.0
+    number_of_people = len(user_ids)
+   
+    return {
+        "overall_average": overall_average,
+        "number_of_people": number_of_people,
+        "skill_avg_ratings": skill_avg_ratings
+    }
+
+<<<<<<< HEAD
 @router.post("/", status_code=201, response_model=MACH_Employee)
 def create_employee(
     *,
@@ -291,6 +304,8 @@ def create_employee(
     #         if rating is not None:
     #             query = query.where(skill_column == rating)    
     # result = db.execute(query)
+=======
+>>>>>>> 66a43808ab0e311d37579e315ed1a8c006ebeef8
 ################################################################################################
 
 # @router.get("/replacement_finder/")

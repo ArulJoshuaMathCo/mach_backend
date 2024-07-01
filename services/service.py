@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, case
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from decimal import Decimal
@@ -471,3 +471,85 @@ async def fetch_employees_by_user_ids(
 ) -> List[Any]:
     query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
     return await run_in_executor(query.all)
+
+# async def calculate_skill_avg_ratings(db: Session, user_ids: List[str], skill_name: Optional[str]):
+#     # Dynamically calculate average ratings for each skill
+#     if skill_name:
+#         skill_column = getattr(Skills1, skill_name.lower(), None)
+#         if not skill_column:
+#             return []
+#         avg_rating = func.avg(skill_column).label("average_rating")
+#         count_people = func.sum(case([(skill_column != None, 1)], else_=0)).label("number_of_people")
+#         query = select(
+#             avg_rating,
+#             count_people
+#         ).where(Skills1.user_id.in_(user_ids)).filter(skill_column.isnot(None))
+        
+#         result = db.execute(query).first()
+#         if result:
+#             avg, count = result
+#             return [{
+#                 "skill_name": skill_name,
+#                 "average_rating": avg,
+#                 "number_of_people": count
+#             }]
+#     else:
+#         skill_columns = Skills1.__table__.columns.keys()
+#         results = []
+#         for skill in skill_columns:
+#             if skill in ["user_id"]:
+#                 continue
+#             skill_column = getattr(Skills1, skill, None)
+#             avg_rating = func.avg(skill_column).label("average_rating")
+#             count_people = func.sum(case([(skill_column != None, 1)], else_=0)).label("number_of_people")
+#             query = select(
+#                 avg_rating,
+#                 count_people
+#             ).where(Skills1.user_id.in_(user_ids)).filter(skill_column.isnot(None))
+            
+#             result = db.execute(query).first()
+#             if result:
+#                 avg, count = result
+#                 if avg is not None and count > 0:
+#                     results.append({
+#                         "skill_name": skill,
+#                         "average_rating": avg,
+#                         "number_of_people": count
+#                     })
+#         return results
+
+async def skill_avg_rating(
+    db: AsyncSession,
+    user_ids: List[str],
+    rating: Optional[int]
+) -> List[Dict[str, Optional[float]]]:
+    skill_avg_ratings = []
+    for skill_column in Skills1.__table__.columns:
+        if skill_column.name != 'EMP ID':
+            avg_rating_query = select(
+                func.avg(skill_column).label('average_rating'),
+                func.count().label('employee_count')
+            ).filter(
+                skill_column.isnot(None),
+                Skills1.user_id.in_(user_ids),
+                #skill_column.in_([1, 2, 3, 4, 5])
+            )
+            if rating is not None:
+                avg_rating_query = avg_rating_query.filter(skill_column == rating)
+            
+            result = db.execute(avg_rating_query)
+            avg_rating, employee_count = result.one_or_none()
+
+            if avg_rating is not None:
+                skill_avg_ratings.append({
+                    "skill_name": skill_column.name,
+                    "average_rating": avg_rating,
+                    "employee_count": employee_count
+                })
+            else:
+                skill_avg_ratings.append({
+                    "skill_name": skill_column.name,
+                    "average_rating": None,
+                    "employee_count": 0
+                })
+    return skill_avg_ratings
