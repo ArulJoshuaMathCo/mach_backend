@@ -527,10 +527,11 @@ async def skill_avg_rating(
         if skill_column.name != 'EMP ID':
             avg_rating_query = select(
                 func.avg(skill_column).label('average_rating'),
-                func.count(skill_column).label('employee_count')
+                func.count().label('employee_count')
             ).filter(
                 skill_column.isnot(None),
-                Skills1.user_id.in_(user_ids)
+                Skills1.user_id.in_(user_ids),
+                skill_column.in_([1, 2, 3, 4, 5])
             )
             
             result = db.execute(avg_rating_query)

@@ -240,11 +240,17 @@ async def employees_skill_screen(
     result = db.execute(query)
     rows = result.scalars().all()
     user_ids = [employee.user_id for employee in rows]
- 
+
     # Calculate average skill ratings
     skill_avg_ratings = await skill_avg_rating(db, user_ids)
+    overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
+    number_of_people = len(user_ids)
    
-    return {"skill_avg_ratings": skill_avg_ratings}
+    return {
+        "overall_average": overall_average,
+        "number_of_people": number_of_people,
+        "skill_avg_ratings": skill_avg_ratings
+    }
 
 ################################################################################################
 

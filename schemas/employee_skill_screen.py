@@ -7,4 +7,6 @@ class EmployeeSkill(BaseModel):
     employee_count: int
 
 class EmployeeSkillScreen(BaseModel):
+    overall_average: float
+    number_of_people: int
     skill_avg_ratings: List[EmployeeSkill]
