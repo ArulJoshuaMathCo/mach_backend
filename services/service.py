@@ -302,7 +302,7 @@ async def process_employees_with_skills1(
             "iteration": employee.iteration,
             "capabilities": employee.capabilities,
             "serviceline_name": employee.serviceline_name,
-            "function": employee.function,
+            "functions": employee.function,
             "skills_count": total_skills_rated,
             "average_rating": average_rating,
             "skills": skills_data

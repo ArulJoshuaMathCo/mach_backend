@@ -43,17 +43,23 @@ async def root(
     result = await crud.employee.get_multi(db=db)
     return { "employees": result}
 
-@router.get("/onlyemployees/", response_model=List[MACH_Employee])
+@router.get("/onlyemployees/")
 async def get_only_employees(
     db: Session = Depends(deps.get_db),
-    name: str = Query(None, description="Filter by employee name"),
-    designation: str = Query(None, description="Filter by employee designation"),
-    account: str = Query(None, description="Filter by employee account"),
-    lead: str = Query(None, description="Filter by employee lead"),
-    latest: str = Query(None, description="filter by validated or not validated"),
-    manager_name: str = Query(None, description="Filter by employee manager name"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    tenure:Optional[List[str]] = Query(None, description="Filter by tenure"),
+    iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
+    capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
+    function:Optional[List[str]] = Query(None, description="Filter by function"),
 ):
-    employees = await fetch_employees(db, name, designation, account, lead,latest, manager_name)
+    employees = await fetch_employees(
+        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,function)
     return employees
 
 
@@ -96,14 +102,14 @@ async def talent_finder(
     iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
     capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
     serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
-    function:Optional[List[str]] = Query(None, description="Filter by function"),
+    functions:Optional[List[str]] = Query(None, description="Filter by function"),
     skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
     rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
 ):
     rows =await fetch_employees(
-        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,function, skill_name, rating,
+        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,functions, skill_name, rating,
         
     )
     employees_with_skills = await process_employees_with_skills1(rows,rating,skill_name)

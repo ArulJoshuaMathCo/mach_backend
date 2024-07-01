@@ -78,7 +78,7 @@ async def find_nearest_matches(
     with open('services/skill_mapping.json', 'r') as file:
         skill_mapping = json.load(file)
 
-
+    match={}
     nearest_matches = []
     for employee in employees_with_skills:
         if employee['average_rating'] >= overall_avg_rating:
@@ -87,7 +87,9 @@ async def find_nearest_matches(
                 mapped_skill_name = skill_mapping.get(skill_name.lower())
                 if mapped_skill_name and skill_value >= skill_avg_rating.get(mapped_skill_name, 0):
                     matching_skills += 1
+                    match[mapped_skill_name]=skill_value
             employee['matching_skills'] = matching_skills
+            employee["matched skills"]=match
             nearest_matches.append(employee)
     return nearest_matches
 
