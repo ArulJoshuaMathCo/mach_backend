@@ -46,15 +46,15 @@ async def fetch_employees(
     if validated:
         query = query.where(employeeModel.validation.in_(validated))
     if tenure:
-        query = query.where(employeeModel.tenure.in_(validated))
+        query = query.where(employeeModel.tenure.in_(tenure))
     if iteration:
-        query = query.where(employeeModel.iteration.in_(validated))
+        query = query.where(employeeModel.iteration.in_(iteration))
     if capabilities:
-        query = query.where(employeeModel.capabilities.in_(validated))
+        query = query.where(employeeModel.capabilities.in_(capabilities))
     if serviceline_name:
-        query = query.where(employeeModel.serviceline_name.in_(validated))
+        query = query.where(employeeModel.serviceline_name.in_(serviceline_name))
     if function:
-        query = query.where(employeeModel.function.in_(validated))
+        query = query.where(employeeModel.function.in_(function))
     if skill_name is not None and rating is not None:
         # Create AND conditions for both skill name and rating
         skill_rating_conditions = [
