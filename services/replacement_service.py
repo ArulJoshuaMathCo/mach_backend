@@ -40,38 +40,59 @@ from services.service import run_in_executor
 async def calculate_skill_avg_ratings(
     db: Session,
     user_ids: List[str],
-    skill_name: Optional[str]
+    skill_names: Optional[List[str]]
 ) -> Dict[str, Decimal]:
     skill_avg_ratings = {}
+
     for skill_column in Skills1.__table__.columns:
         if skill_column.name != 'user_id':
             avg_rating_query = db.query(func.avg(skill_column)).filter(
                 skill_column.isnot(None),
                 Skills1.user_id.in_(user_ids)
             )
-            if skill_name:
-                avg_rating_query = avg_rating_query.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
+
+            if skill_names:
+                skill_conditions = [
+                    getattr(Skills1, skill_name.lower(), None).isnot(None)
+                    for skill_name in skill_names if getattr(Skills1, skill_name.lower(), None) is not None
+                ]
+                if skill_conditions:
+                    avg_rating_query = avg_rating_query.filter(or_(*skill_conditions))
             
             avg_rating = await run_in_executor(avg_rating_query.scalar)
             if avg_rating is not None:
                 skill_avg_ratings[skill_column.name] = avg_rating
             else:
                 skill_avg_ratings[skill_column.name] = float(0)
+
     return skill_avg_ratings
 # async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
 #     return sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else float(0)
 
-# async def find_nearest_matches(
-#     employees_with_skills: List[Dict[str, Any]],
-#     overall_avg_rating: Decimal
-# ) -> List[Dict[str, Any]]:
-#     nearest_matches = []
-#     for employee in employees_with_skills:
-#         if employee['average_rating'] >= overall_avg_rating:
-#             matching_skills = len(set(skill_name for skill in employee['skills'] for skill_name in skill.keys()))
-#             employee['matching_skills'] = matching_skills
-#             nearest_matches.append(employee)
-#     return nearest_matches
+async def find_nearest_matches(
+    employees_with_skills: List[Dict[str, Any]],
+    overall_avg_rating: Decimal,
+    skill_avg_rating: Dict[str, float]
+) -> List[Dict[str, Any]]:
+    import json
+    with open('services/skill_mapping.json', 'r') as file:
+        skill_mapping = json.load(file)
+
+    match={}
+    nearest_matches = []
+    for employee in employees_with_skills:
+        if employee['average_rating'] >= overall_avg_rating:
+            matching_skills = 0
+            for skill_name, skill_value in employee['skills'].items():
+                mapped_skill_name = skill_mapping.get(skill_name.lower())
+                if mapped_skill_name and skill_value >= skill_avg_rating.get(mapped_skill_name, 0):
+                    matching_skills += 1
+                    match[mapped_skill_name]=skill_value
+            employee['matching_skills'] = matching_skills
+            employee["matched skills"]=match
+            nearest_matches.append(employee)
+    return nearest_matches
+
 async def process_employees_with_skills(
     employees: List[employeeModel],
     skills_map: Dict[str, List[Skills1]]
@@ -125,18 +146,51 @@ async def process_employees_with_skills(
 #         skill_avg_ratings[skill_name] = skill_totals[skill_name] / skill_counts[skill_name]
 
 #     return skill_avg_ratings
+async def rf_fetch_employees(
+    db: Session,
+    name: Optional[List[str]] = None,
+    designation: Optional[List[str]]= None,
+    account: Optional[List[str]]= None,
+    validated: Optional[List[str]]= None,
+    skill_name: Optional[List[str]]= None,
+    rating: Optional[List[int]]= None,
+    # page: int=1, page_size: int=10
+) -> List[employeeModel]:
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
+    if name:
+        query = query.where(employeeModel.name.in_(name))
+    if designation:
+        query = query.where(employeeModel.designation.in_(designation))
+    if account:
+        query = query.where(employeeModel.account.in_(account))
+    if validated:
+        query = query.where(employeeModel.latest.in_(validated))
+    if skill_name:
+        # Create OR conditions for skill names
+        skill_conditions = [getattr(Skills1, skill.lower(), None).isnot(None) for skill in skill_name if getattr(Skills1, skill.lower(), None) is not None]
+        if skill_conditions:
+            query = query.where(or_(*skill_conditions))
+    if rating is not None:
+        # Construct OR condition for all columns of Skills1
+        or_conditions = []
+        for column in Skills1.__table__.columns:
+            if column.name != 'user_id':  # Exclude user_id column from filtering
+                for rate in rating:
+                    or_conditions.append(column == rate)
+        
+        # Apply the OR conditions to the query
+        query = query.filter(or_(*or_conditions))
+    
+    result = db.execute(query)
+    return result.scalars().all()
 
 async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
     total_rating = sum(skill_avg_ratings.values())
     total_skills = len(skill_avg_ratings)
     return total_rating / total_skills if total_skills > 0 else 0
 
-async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float,page: int=1,
-    page_size: int=5) -> List[Dict[str, Any]]:
-    # Example implementation for finding nearest matches based on average rating
-    employees_with_skills.sort(key=lambda x: abs(x['average_rating'] - overall_avg_rating))
-    # start_index = (page - 1) * page_size
-    # end_index = start_index + page_size
-
-    return employees_with_skills[:]  # Return top 5 nearest matches
+# async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float) -> List[Dict[str, Any]]:
+#     # Example implementation for finding nearest matches based on average rating
+#     employees_with_skills.sort(key=lambda x: abs(x['average_rating'] - overall_avg_rating))
+#     return employees_with_skills[:]  # Return top 5 nearest matches

@@ -64,12 +64,12 @@ def load_csv_to_db(csv_file: str, model, db_session: Session):
         row_dict = row.to_dict()
         
         # Ensure user_id is a UUID
-        if 'user_id' in row_dict:
-            row_dict['user_id'] = uuid.UUID(row_dict['user_id'])
+        if 'EMP ID' in row_dict:
+            row_dict['user_id'] = row_dict['EMP ID']
         
         # Default submitter_id to 1 if not present
-        if 'submitter_id' not in row_dict:
-            row_dict['submitter_id'] = 1
+        if 'submitted_by' not in row_dict:
+            row_dict['submitter_id'] = "user"
         
         # Adjust column names to match the model's attributes
         adjusted_row_dict = {}
@@ -108,9 +108,9 @@ def load_csv_to_db(csv_file: str, model, db_session: Session):
 # Usage example
 if __name__ == "__main__":
     db_session = SessionLocal()
-    load_csv_to_db('mach_employee.csv', MACH_Employee, db_session)
+    load_csv_to_db('new_data3.csv', MACH_Employee, db_session)
 
     # Load Skills1 data
-    load_csv_to_db("skills1.csv", Skills1, db_session)
+    load_csv_to_db("new_data1.csv", Skills1, db_session)
 
     db_session.close()

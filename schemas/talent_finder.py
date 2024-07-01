@@ -1,16 +1,15 @@
 from uuid import UUID
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
-from schemas.Employee_with_skills import SkillBase
+from schemas.skills import SkillsBase
 
 class TalentFinder(BaseModel):
-    user_id:UUID 
+    user_id: UUID 
     name: str
-    designation: str
-    account: str
-    lead: str
-    manager_name: str
-    validated: Optional[str] = None
-    skills: List[SkillBase]
-    total_skills_rated: float
+    designation: Optional[str] = None
+    account: Optional[str] = None
+    lead: Optional[str] = None
+    manager_name: Optional[str] = None
+    skills_count: int
     average_rating: float
+    skills: Dict[str, int]

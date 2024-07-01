@@ -14,7 +14,7 @@ from schemas.employee import EmployeeCreate
 from sqlalchemy import and_, or_, func, case
 from sqlalchemy.future import select
 from typing import List
-from schemas.employee import MACH_Employee
+from schemas.employee import MACH_Employee,employeeSearchResults
 from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.sme_finder import SmeFinder, SkillDetail
 from schemas.talent_finder import TalentFinder
@@ -43,17 +43,23 @@ async def root(
     result = await crud.employee.get_multi(db=db)
     return { "employees": result}
 
-@router.get("/onlyemployees/", response_model=List[MACH_Employee])
+@router.get("/onlyemployees/")
 async def get_only_employees(
     db: Session = Depends(deps.get_db),
-    name: str = Query(None, description="Filter by employee name"),
-    designation: str = Query(None, description="Filter by employee designation"),
-    account: str = Query(None, description="Filter by employee account"),
-    lead: str = Query(None, description="Filter by employee lead"),
-    latest: str = Query(None, description="filter by validated or not validated"),
-    manager_name: str = Query(None, description="Filter by employee manager name"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    tenure:Optional[List[str]] = Query(None, description="Filter by tenure"),
+    iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
+    capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
+    function:Optional[List[str]] = Query(None, description="Filter by function"),
 ):
-    employees = await fetch_employees(db, name, designation, account, lead,latest, manager_name)
+    employees = await fetch_employees(
+        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,function)
     return employees
 
 
@@ -86,22 +92,27 @@ from sqlalchemy import select, join
 @router.get("/talent_finder/")
 async def talent_finder(
     db: AsyncSession = Depends(deps.get_db),
-    name: Optional[str] = Query(None, description="Filter by employee name"),
-    designation: Optional[str] = Query(None, description="Filter by employee designation"),
-    account: Optional[str] = Query(None, description="Filter by employee account"),
-    lead: Optional[str] = Query(None, description="Filter by employee lead"),
-    manager_name: Optional[str] = Query(None, description="Filter by employee manager name"),
-    validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
-    skill_name: Optional[str] = Query(None, description="Filter by skill name"),
-    rating: Optional[int] = Query(None, description="Filter by skill rating"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    lead: Optional[List[str]] = Query(None, description="Filter by employee lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by employee manager name"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    tenure:Optional[List[str]] = Query(None, description="Filter by tenure"),
+    iteration:Optional[List[int]] = Query(None, description="Filter by iteration"),
+    capabilities:Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    serviceline_name:Optional[List[str]] = Query(None, description="Filter by seviceline"),
+    functions:Optional[List[str]] = Query(None, description="Filter by function"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+    rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
 ):
     rows =await fetch_employees(
-        db, name, designation, account, lead, manager_name, validated, skill_name, rating,
+        db, name, designation, account, lead, manager_name, validated,tenure,iteration,capabilities,serviceline_name,functions, skill_name, rating,
         
     )
-    employees_with_skills = await process_employees_with_skills1(rows)
+    employees_with_skills = await process_employees_with_skills1(rows,rating,skill_name)
     return employees_with_skills
        
 # @router.get("/sme_finder/")
@@ -161,57 +172,78 @@ async def talent_finder(
 @router.get("/replacement_finder/")
 async def replacement_finder(
     db: AsyncSession = Depends(deps.get_db),
-    name: Optional[str] = Query(None, description="Filter by employee name"),
-    designation: Optional[str] = Query(None, description="Filter by employee designation"),
-    account: Optional[str] = Query(None, description="Filter by employee account"),
-    validated: Optional[str] = Query(None, description="Filter by validated or not-validated"),
-    skill_name: Optional[str] = Query(None, description="Filter by skill name"),
-    rating: Optional[int] = Query(None, description="Filter by skill rating"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    designation: Optional[List[str]] = Query(None, description="Filter by employee designation"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validated or not-validated"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+    rating: Optional[List[int]] = Query(None, description="Filter by skill rating"),
     # page: int = Query(1, description="Page number"),
     # page_size: int = Query(10, description="Number of items per page")
     # current_user: User = Depends(deps.get_current_active_superuser),
 ):
-    # Fetch employees
-    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
-
-    if name:
-        query = query.where(employeeModel.name==name)
-    if designation:
-        query = query.where(employeeModel.designation==designation)
-    if account:
-        query = query.where(employeeModel.account==account)
-    if validated is not None:
-        query = query.where(employeeModel.latest == validated)
-
-    # Fetch skills and filter if necessary
-    if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            query = query.where(skill_column.isnot(None))
-            if rating is not None:
-                query = query.where(skill_column == rating)    
-    result = db.execute(query)
-    rows = result.scalars().all()    
+    rows = await rf_fetch_employees(db, name,)    
     user_ids = [employee.user_id for employee in rows]
     # Calculate average skill ratings
     skill_avg_ratings = await calculate_skill_avg_ratings(db, user_ids,skill_name)
-    
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
-    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
-    result = db.execute(query)
-    employees= result.scalars().all()
-    employees_with_skills = await process_employees_with_skills1(employees)
+    employees= await fetch_employees(db,designation=designation, account=account,validated=validated,skill_name=skill_name,rating=rating,)    
+    employees_with_skills = await process_employees_with_skills1(employees,rating=rating,skill_query_name=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
-    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,)
+    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,skill_avg_rating=skill_avg_ratings)
     
     return {
         "skill_avg_ratings": skill_avg_ratings,
         "overall_average_rating": overall_avg_rating,
         "nearest_matches": nearest_matches
     }
+from schemas.employee_skill_screen import EmployeeSkillScreen
 
+@router.get("/employees_skill_screen/",response_model=EmployeeSkillScreen)
+async def employees_skill_screen(
+    db: AsyncSession = Depends(deps.get_db),
+    account: Optional[str] = Query(None, description="Filter by account"),
+    lead: Optional[str] = Query(None, description="Filter by lead"),
+    manager: Optional[str] = Query(None, description="Filter by manager"),
+    designation: Optional[str] = Query(None, description="Filter by designation"),
+    validated: Optional[str] = Query(None, description="Filter by validation"),
+    
+    skill_name: Optional[str] = Query(None, description="Filter by skills"),
+    rating: Optional[int] = Query(None, description="Filter by rating")
+):
+    # Fetch employees
+    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+ 
+    if account:
+        query = query.where(employeeModel.account == account)
+    if lead:
+        query = query.where(employeeModel.lead == lead)
+    if manager:
+        query = query.where(employeeModel.manager_name == manager)
+    if designation:
+        query = query.where(employeeModel.designation == designation)
+    if validated:
+        query = query.where(employeeModel.latest == validated)
+ 
+    # Fetch skills and filter if necessary
+    if skill_name:
+        skill_column = getattr(Skills1, skill_name.lower(), None)
+        if skill_column is not None:
+            query = query.where(skill_column.isnot(None))
+            if rating is not None:
+                query = query.where(skill_column == rating)
+   
+    result = db.execute(query)
+    rows = result.scalars().all()
+    user_ids = [employee.user_id for employee in rows]
+ 
+    # Calculate average skill ratings
+    skill_avg_ratings = await skill_avg_rating(db, user_ids, skill_name)
+   
+    return {"skill_avg_ratings": skill_avg_ratings}
 
+<<<<<<< HEAD
 @router.get("/employees_skill_screen/")
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
@@ -323,6 +355,28 @@ async def get_skill_rating_percentages(db: AsyncSession, total_employees: int) -
 
 
 
+=======
+# Fetch employees replacement_finder
+    # query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
+
+    # if name:
+    #     query = query.where(employeeModel.name==name)
+    # if designation:
+    #     query = query.where(employeeModel.designation==designation)
+    # if account:
+    #     query = query.where(employeeModel.account==account)
+    # if validated is not None:
+    #     query = query.where(employeeModel.latest == validated)
+
+    # # Fetch skills and filter if necessary
+    # if skill_name:
+    #     skill_column = getattr(Skills1, skill_name.lower(), None)
+    #     if skill_column is not None:
+    #         query = query.where(skill_column.isnot(None))
+    #         if rating is not None:
+    #             query = query.where(skill_column == rating)    
+    # result = db.execute(query)
+>>>>>>> b25d42a1360126bb4174c2f69bf56a0a8f031e95
 ################################################################################################
 
 # @router.get("/replacement_finder/")
@@ -550,17 +604,22 @@ async def get_skill_rating_percentages(db: AsyncSession, total_employees: int) -
 #     return employees_with_skills
 
 
-# @router.get("/search/", status_code=200, response_model=employeeSearchResults)
-# def search_employees(
-#     *,
-#     keyword: str = Query(None, min_length=3, example="chicken"),
-#     max_results: Optional[int] = 10,
-#     db: Session = Depends(deps.get_db),
-# ) -> dict:
-#     """
-#     Search for employees based on label keyword
-#     """
-#     employees = crud.employee.get_multi(db=db, limit=max_results)
-#     results = filter(lambda employee: keyword.lower() in employee.label.lower(), employees)
+@router.get("/search/", status_code=200, response_model=employeeSearchResults)
+async def search_employees(
+    *,
+    keyword: str = Query(None, min_length=3, example="MACH"),
+    max_results: Optional[int] = 10,
+    db: Session = Depends(deps.get_db),
+) -> dict:
+    """
+    Search for employees based on label keyword
+    """
+    employees =await crud.employee.get_multi(db=db, limit=max_results)
+    results = filter(lambda employee: keyword.lower() in employee.name.lower(), employees)
 
+<<<<<<< HEAD
 #     return {"results": list(results)}
+=======
+    return {"results": list(results)[:5]}
+
+>>>>>>> b25d42a1360126bb4174c2f69bf56a0a8f031e95

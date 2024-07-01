@@ -16,37 +16,69 @@ async def run_in_executor(db_func, *args):
         return await loop.run_in_executor(pool, db_func, *args)
 async def fetch_employees(
     db: AsyncSession,
-    name: Optional[str] = None,
-    designation: Optional[str]= None,
-    account: Optional[str]= None,
-    lead: Optional[str]= None,
-    manager_name: Optional[str]= None,
-    validated: Optional[str]= None,
-    skill_name: Optional[str]= None,
-    rating: Optional[int]= None,
+    name: Optional[List[str]]=None,
+    designation: Optional[List[str]]= None,
+    account: Optional[List[str]]= None,
+    lead: Optional[List[str]]= None,
+    manager_name: Optional[List[str]]= None,
+    validated: Optional[List[str]]= None,
+    tenure: Optional[List[str]]= None,
+    iteration: Optional[List[int]]= None,
+    capabilities: Optional[List[str]]= None,
+    serviceline_name: Optional[List[str]]= None,
+    function: Optional[List[str]]= None,
+    skill_name: Optional[List[str]]= None,
+    rating: Optional[List[int]]= None,
     # page: int=1, page_size: int=10
 ) -> List[employeeModel]:
     query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
 
     if name:
-        query = query.where(employeeModel.name==name)
+        query = query.where(employeeModel.name.in_(name))
     if designation:
-        query = query.where(employeeModel.designation==designation)
+        query = query.where(employeeModel.designation.in_(designation))
     if account:
-        query = query.where(employeeModel.account==account)
+        query = query.where(employeeModel.account.in_(account))
     if lead:
-        query = query.where(employeeModel.lead==lead)
+        query = query.where(employeeModel.lead.in_(lead))
     if manager_name:
-        query = query.where(employeeModel.manager_name==manager_name)
+        query = query.where(employeeModel.manager_name.in_(manager_name))
     if validated:
-        query = query.where(employeeModel.latest==validated)
-    if skill_name:
-        skill_column = getattr(Skills1, skill_name.lower(), None)
-        if skill_column is not None:
-            if rating is not None:
-                query = query.where(skill_column == rating)
-            else:
-                query = query.where(skill_column.isnot(None))
+        query = query.where(employeeModel.validation.in_(validated))
+    if tenure:
+        query = query.where(employeeModel.tenure.in_(tenure))
+    if iteration:
+        query = query.where(employeeModel.iteration.in_(iteration))
+    if capabilities:
+        query = query.where(employeeModel.capabilities.in_(capabilities))
+    if serviceline_name:
+        query = query.where(employeeModel.serviceline_name.in_(serviceline_name))
+    if function:
+        query = query.where(employeeModel.function.in_(function))
+    if skill_name is not None and rating is not None:
+        # Create AND conditions for both skill name and rating
+        skill_rating_conditions = [
+            or_(getattr(Skills1, skill.lower(), None) == rate) 
+            for skill in skill_name 
+            for rate in rating 
+            if getattr(Skills1, skill.lower(), None) is not None
+        ]
+        if skill_rating_conditions:
+            query = query.where(or_(*skill_rating_conditions))
+    elif skill_name is not None:
+        # Create OR conditions for skill names
+        skill_conditions = [getattr(Skills1, skill.lower(), None).isnot(None) for skill in skill_name if getattr(Skills1, skill.lower(), None) is not None]
+        if skill_conditions:
+            query = query.where(or_(*skill_conditions))
+    elif rating is not None:
+        # Construct OR condition for all columns of Skills1
+        or_conditions = [
+            column == rate 
+            for column in Skills1.__table__.columns 
+            if column.name != 'user_id'  # Exclude user_id column from filtering
+            for rate in rating
+        ]
+        query = query.where(or_(*or_conditions))
     
     result = db.execute(query)
     return result.scalars().all()
@@ -164,11 +196,59 @@ async def process_employees_with_skills(
         })
     return employees_with_skills
 
+async def skill_avg_rating(
+    db: AsyncSession,
+    user_ids: List[str],
+    skill_name: Optional[str]
+) -> List[Dict[str, Optional[float]]]:
+    skill_avg_ratings = []
+    for skill_column in Skills1.__table__.columns:
+        if skill_column.name != 'user_id':
+            avg_rating_query = select(
+                func.avg(skill_column).label('average_rating'),
+                func.count(skill_column).label('employee_count')
+            ).filter(
+                skill_column.isnot(None),
+                Skills1.user_id.in_(user_ids)
+            )
+            if skill_name:
+                avg_rating_query = avg_rating_query.filter(getattr(Skills1, skill_name.lower(), None).isnot(None))
+           
+            result = db.execute(avg_rating_query)
+            avg_rating, employee_count = result.one_or_none()
+ 
+            if avg_rating is not None:
+                skill_avg_ratings.append({
+                    "skill_name": skill_column.name,
+                    "average_rating": avg_rating,
+                    "employee_count": employee_count
+                })
+            else:
+                skill_avg_ratings.append({
+                    "skill_name": skill_column.name,
+                    "average_rating": None,
+                    "employee_count": 0
+                })
+    return skill_avg_ratings
+from sqlalchemy.orm.properties import ColumnProperty
+def create_dynamic_mapping(model) -> Dict[str, str]:
+    attribute_to_column = {}
+    for prop in model.__mapper__.iterate_properties:
+        if isinstance(prop, ColumnProperty):
+            for column in prop.columns:
+                attribute_to_column[prop.key] = column.name
+    return attribute_to_column
 
 async def process_employees_with_skills1(
-    employees: List[employeeModel]
+    employees: List[employeeModel],
+    rating: Optional[List[int]] = None,
+    skill_query_name: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
     employees_with_skills = []
+
+    # Create a dynamic mapping of attribute names to actual column names
+    attribute_to_column = create_dynamic_mapping(Skills1)
+
     for employee in employees:
         total_skills_rated = 0
         total_rating = 0
@@ -176,14 +256,36 @@ async def process_employees_with_skills1(
 
         # Ensure employee.skills is loaded and not empty
         if employee.skills:
-            # Assuming skills are stored in columns like 'python', 'sql', etc.
-            for skill_name in Skills1.__table__.columns.keys():
-                if skill_name != 'user_id':  # Exclude user_id column
-                    skill_value = getattr(employee.skills[0], skill_name.lower(), None)
-                    if skill_value is not None:  # Check if skill value is not None
+            # Iterate over the attributes of the skills object
+            for skill in employee.skills:
+                for skill_attr, skill_value in skill.__dict__.items():
+                    if skill_attr != 'user_id' and skill_attr != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
+
                         total_skills_rated += 1
                         total_rating += skill_value
-                        skills_data[skill_name] = skill_value
+
+                        # Get the actual column name
+                        skill_column_name = attribute_to_column.get(skill_attr, None)
+                        if skill_column_name is None:
+                            print(f"Attribute {skill_attr} not found in model columns mapping.")
+                            continue
+
+                        if rating and skill_query_name is not None:
+                            for query_skill in skill_query_name:
+                                for rate in rating:
+                                    if rate == skill_value and query_skill == skill_column_name:
+                                        skills_data[skill_column_name] = skill_value
+                        elif rating is not None and skill_query_name is None:
+                            for rate in rating:
+                                if rate is None or rate == skill_value:
+                                    skills_data[skill_column_name] = skill_value
+                        elif skill_query_name is not None and rating is None:
+                            for query_skill in skill_query_name:
+                                if query_skill is None or query_skill == skill_column_name:
+                                    skills_data[skill_column_name] = skill_value
+                        else:
+                            if rating is None and skill_query_name is None:
+                                skills_data[skill_column_name] = skill_value
 
             average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
         else:
@@ -196,12 +298,149 @@ async def process_employees_with_skills1(
             "account": employee.account,
             "lead": employee.lead,
             "manager_name": employee.manager_name,
+            "tenure": employee.tenure,
+            "iteration": employee.iteration,
+            "capabilities": employee.capabilities,
+            "serviceline_name": employee.serviceline_name,
+            "functions": employee.function,
             "skills_count": total_skills_rated,
             "average_rating": average_rating,
             "skills": skills_data
         })
 
     return employees_with_skills
+# async def process_employees_with_skills1(
+#     employees: List[employeeModel],
+#     rating:Optional[List[int]]=None,
+#     skill_query_name:Optional[List[str]]= None
+# ) -> List[Dict[str, Any]]:
+#     employees_with_skills = []
+    # for employee in employees:
+    #     total_skills_rated = 0
+    #     total_rating = 0
+    #     skills_data = {}
+
+    #     # Ensure employee.skills is loaded and not empty
+    #     if employee.skills:
+    #         # Iterate over the attributes of the skills object
+    #         for skill in employee.skills:
+    #             for skill_name, skill_value in skill.__dict__.items():
+    #                 if skill_name != 'user_id' and skill_name != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
+                        
+    #                     total_skills_rated += 1
+    #                     total_rating += skill_value
+    #                     if rating and skill_query_name is not None:
+    #                         for skill in skill_query_name:
+    #                             for rate in rating:
+    #                                 if rate==skill_value and skill == skill_name:
+    #                                     skills_data[skill_name] = skill_value
+    #                     elif rating is not None and skill_query_name is None:
+    #                         for rate in rating:
+    #                             if rate is None or rate==skill_value:
+    #                                 skills_data[skill_name] = skill_value
+    #                     elif skill_query_name is not None and rating is None:
+    #                         for skill in skill_query_name:
+    #                             if skill is None or skill == skill_name:
+    #                                 skills_data[skill_name] = skill_value
+    #                     else:
+                            
+    #                         if rating is None and skill_query_name is not None:
+    #                             skills_data[skill_name] = skill_value
+
+    #         average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
+    #     else:
+    #         average_rating = 0
+
+    #     employees_with_skills.append({
+    #         "user_id": employee.user_id,
+    #         "name": employee.name,
+    #         "designation": employee.designation,
+    #         "account": employee.account,
+    #         "lead": employee.lead,
+    #         "manager_name": employee.manager_name,
+    #         "tenure":employee.tenure,
+    #         "iteration":employee.iteration,
+    #         "capabilities":employee.capabilities,
+    #         "serviceline_name":employee.serviceline_name,
+    #         "function":employee.function,
+    #         "skills_count": total_skills_rated,
+    #         "average_rating": average_rating,
+    #         "skills": skills_data
+    #     })
+
+    # return employees_with_skills
+    # attribute_to_column = {
+    #     "user_id": "EMP ID",
+    #     "python": "Python",
+    #     "sql": "SQL",
+    #     "excel": "Excel",
+    #     "storyboarding": "Storyboarding",
+    #     "business_communication": "Business Communication",
+    #     "javascript": "Javascript",
+    #     "exploratory_data_analysis": "Exploratory Data Analysis",
+    #     # Add more mappings as necessary
+    # }
+
+    # for employee in employees:
+    #     total_skills_rated = 0
+    #     total_rating = 0
+    #     skills_data = {}
+
+    #     # Ensure employee.skills is loaded and not empty
+    #     if employee.skills:
+    #         # Iterate over the attributes of the skills object
+    #         for skill in employee.skills:
+    #             for skill_attr, skill_value in skill.__dict__.items():
+    #                 if skill_attr != 'user_id' and skill_attr != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
+
+    #                     total_skills_rated += 1
+    #                     total_rating += skill_value
+
+    #                     # Get the actual column name
+    #                     skill_column_name = attribute_to_column.get(skill_attr, None)
+    #                     if skill_column_name is None:
+    #                         print(f"Attribute {skill_attr} not found in model columns mapping.")
+    #                         continue
+
+    #                     if rating and skill_query_name is not None:
+    #                         for query_skill in skill_query_name:
+    #                             for rate in rating:
+    #                                 if rate == skill_value and query_skill == skill_column_name:
+    #                                     skills_data[skill_column_name] = skill_value
+    #                     elif rating is not None and skill_query_name is None:
+    #                         for rate in rating:
+    #                             if rate is None or rate == skill_value:
+    #                                 skills_data[skill_column_name] = skill_value
+    #                     elif skill_query_name is not None and rating is None:
+    #                         for query_skill in skill_query_name:
+    #                             if query_skill is None or query_skill == skill_column_name:
+    #                                 skills_data[skill_column_name] = skill_value
+    #                     else:
+    #                         if rating is None and skill_query_name is None:
+    #                             skills_data[skill_column_name] = skill_value
+
+    #         average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
+    #     else:
+    #         average_rating = 0
+
+    #     employees_with_skills.append({
+    #         "user_id": employee.user_id,
+    #         "name": employee.name,
+    #         "designation": employee.designation,
+    #         "account": employee.account,
+    #         "lead": employee.lead,
+    #         "manager_name": employee.manager_name,
+    #         "tenure": employee.tenure,
+    #         "iteration": employee.iteration,
+    #         "capabilities": employee.capabilities,
+    #         "serviceline_name": employee.serviceline_name,
+    #         "function": employee.function,
+    #         "skills_count": total_skills_rated,
+    #         "average_rating": average_rating,
+    #         "skills": skills_data
+    #     })
+
+    # return employees_with_skills
 
 async def employees_with_Skills(
         employees: List[employeeModel],
