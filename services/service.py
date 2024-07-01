@@ -520,7 +520,8 @@ async def fetch_employees_by_user_ids(
 
 async def skill_avg_rating(
     db: AsyncSession,
-    user_ids: List[str]
+    user_ids: List[str],
+    rating: Optional[int]
 ) -> List[Dict[str, Optional[float]]]:
     skill_avg_ratings = []
     for skill_column in Skills1.__table__.columns:
@@ -531,8 +532,10 @@ async def skill_avg_rating(
             ).filter(
                 skill_column.isnot(None),
                 Skills1.user_id.in_(user_ids),
-                skill_column.in_([1, 2, 3, 4, 5])
+                #skill_column.in_([1, 2, 3, 4, 5])
             )
+            if rating is not None:
+                avg_rating_query = avg_rating_query.filter(skill_column == rating)
             
             result = db.execute(avg_rating_query)
             avg_rating, employee_count = result.one_or_none()

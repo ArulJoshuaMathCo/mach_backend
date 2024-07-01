@@ -229,21 +229,19 @@ async def employees_skill_screen(
         query = query.where(employeeModel.validation == validation)
     if iteration:
         query = query.where(employeeModel.iteration == iteration)
- 
-    # Filter skills if rating is specified
-    if rating is not None:
-        for skill_column in Skills1.__table__.columns:
-            if skill_column.name != 'EMP ID':
-                query = query.where(getattr(Skills1, skill_column.name).isnot(None))
-                query = query.where(getattr(Skills1, skill_column.name) == rating)
    
     result = db.execute(query)
     rows = result.scalars().all()
     user_ids = [employee.user_id for employee in rows]
 
     # Calculate average skill ratings
-    skill_avg_ratings = await skill_avg_rating(db, user_ids)
-    overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
+    skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
+    # Calculate overall average rating and number of people
+    total_employee_count = sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
+    if total_employee_count > 0:
+        overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / total_employee_count
+    else:
+        overall_average = 0.0
     number_of_people = len(user_ids)
    
     return {
