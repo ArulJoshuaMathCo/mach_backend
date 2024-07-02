@@ -218,10 +218,14 @@ async def employees_skill_screen(
     designation: Optional[List[str]] = Query(None, description="Filter by designation"),
     validated: Optional[List[str]] = Query(None, description="Filter by validation"),
     iteration: Optional[List[str]] = Query(None, description="Filter by iteration"),
-    rating: Optional[List[int]] = Query(None, description="Filter by rating")
+    rating: Optional[List[int]] = Query(None, description="Filter by rating"),
+    name: Optional[List[str]] = Query(None, description="Filter by employee name"),
+    account: Optional[List[str]] = Query(None, description="Filter by employee account"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+
 ):
     
-    rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating,)
+    rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating, name=name, account=account, skill_name=skill_name)
     user_ids = [employee.user_id for employee in rows]
     # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
@@ -243,6 +247,17 @@ async def employees_skill_screen(
         "number_of_people": number_of_people,
         "skill_avg_ratings": skill_avg_ratings
     }
+
+# @router.get("/executive_summary/")
+# async def executive_summary(
+#     db: AsyncSession = Depends(deps.get_db),
+#     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+#     skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
+#     rating: Optional[List[int]] = Query(None, description="Filter by rating")
+# ):
+#     serviceline_percentages = await fetch_service_line_percentages(db, serviceline_name=serviceline_name, skill_name=skill_name, rating=rating)
+    
+#     return serviceline_percentages
 
 @router.post("/", status_code=201, response_model=MACH_Employee)
 async def create_employee(
@@ -562,7 +577,6 @@ async def delete_employee(
 #     ]
 #     return employees_with_skills
 
-
 @router.get("/search/", status_code=200, response_model=employeeSearchResults)
 async def search_employees(
     *,
@@ -577,4 +591,3 @@ async def search_employees(
     results = filter(lambda employee: keyword.lower() in employee.name.lower(), employees)
 
     return {"results": list(results)[:5]}
-

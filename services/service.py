@@ -1,7 +1,7 @@
-from typing import Optional, List, Dict, Any
-from sqlalchemy.orm import Session
+from typing import Optional, List, Dict, Any, Union
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.future import select
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_, case, and_
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from decimal import Decimal
@@ -9,6 +9,7 @@ from models.Employee import MACH_Employee as employeeModel
 from models.skills import Skills1
 from schemas.Employee_with_skills import SkillBase
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Query
 
 async def run_in_executor(db_func, *args):
     loop = asyncio.get_running_loop()
@@ -553,3 +554,155 @@ async def fetch_employees_by_user_ids(
 #                     "employee_count": 0
 #                 })
 #     return skill_avg_ratings
+
+# async def fetch_service_line_percentages(
+#     db: AsyncSession,
+#     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+#     skill_name: Optional[List[str]] = None,
+#     rating: Optional[List[int]] = None
+# ):
+#     # Fetch total employee count
+#     total_count = db.execute(select(func.count(employeeModel.user_id)))
+#     total_employees = total_count.scalar()
+
+#     # Fetch employee count per service line
+#     query = select(
+#         employeeModel.serviceline_name,
+#         func.count(employeeModel.user_id)
+#     ).group_by(employeeModel.serviceline_name)
+
+#     if serviceline_name:
+#         query = query.where(employeeModel.serviceline_name.in_(serviceline_name))
+
+#     serviceline_counts = db.execute(query)
+#     serviceline_counts = serviceline_counts.all()
+
+#     # Calculate percentage of employees per service line
+#     serviceline_percentages = []
+#     for line in serviceline_counts:
+#         line_data = {
+#             "serviceline_name": line[0],
+#             "employee_percentage": (line[1] / total_employees) * 100
+#         }
+
+#         # Fetch skills percentages for current service line
+#         skills_percentages = await fetch_skills_percentages(db, line[0], skill_name, rating)
+#         line_data["skills"] = skills_percentages
+
+#         serviceline_percentages.append(line_data)
+
+#     return serviceline_percentages
+
+# async def fetch_skills_percentages(
+#     db: AsyncSession,
+#     serviceline_name: str,
+#     skill_name: Optional[List[str]] = None,
+#     rating: Optional[List[int]] = None
+# ):
+#     # Fetch employees in the specified service line
+#     employees = await fetch_employees(db, serviceline_name=[serviceline_name])
+
+#     # Calculate skill percentages
+#     total_skills = len(employees)  # Assuming each employee has one entry per skill
+
+#     skills_percentages = []
+#     for skill_name in Skills1.__table__.columns.keys():
+#         if skill_name != 'EMP ID':
+#             skill_count = sum(1 for employee in employees if getattr(employee, skill_name.lower(),None) is not None)
+#             skill_percentage = (skill_count / total_skills) * 100 if total_skills > 0 else 0
+#             skills_percentages.append({
+#                 "skill_name": skill_name,
+#                 "skill_percentage": skill_percentage
+#             })
+
+#     return skills_percentages
+
+# async def calculate_skill_percentages(
+#     db: AsyncSession,
+#     serviceline_name: str,
+#     skill_names: Optional[List[str]] = None,
+#     rating: Optional[List[int]] = None
+# ) -> Dict[str, float]:
+#     skill_percentages = {}
+
+#     # Fetch employees in the specified service line
+#     employees = await fetch_employees(db, serviceline_name=[serviceline_name])
+
+#     total_skills = len(employees)  # Assuming each employee has one entry per skill
+
+#     if skill_names:
+#         for skill_name in skill_names:
+#             skill_count = sum(1 for employee in employees if getattr(employee, skill_name.lower(), None) is not None)
+#             skill_percentage = (skill_count / total_skills) * 100 if total_skills > 0 else 0
+#             skill_percentages[skill_name] = skill_percentage
+
+#     return skill_percentages
+
+# async def fetch_service_line_percentages(
+#     db: AsyncSession,
+#     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+#     skill_name: Optional[List[str]] = None,
+#     rating: Optional[List[int]] = None
+# ):
+#     # Fetch total employee count
+#     total_count = db.execute(select(func.count(employeeModel.user_id)))
+#     total_employees = total_count.scalar()
+
+#     # Fetch employee count per service line
+#     query = select(
+#         employeeModel.serviceline_name,
+#         func.count(employeeModel.user_id)
+#     ).group_by(employeeModel.serviceline_name)
+
+#     if serviceline_name:
+#         query = query.where(employeeModel.serviceline_name.in_(serviceline_name))
+
+#     serviceline_counts = db.execute(query)
+#     serviceline_counts = serviceline_counts.all()
+
+#     # Calculate percentage of employees per service line
+#     serviceline_percentages = []
+#     for line in serviceline_counts:
+#         line_data = {
+#             "serviceline_name": line[0],
+#             "employee_percentage": (line[1] / total_employees) * 100
+#         }
+
+#         # Fetch skills percentages for current service line
+#         skills_percentages = await calculate_skill_percentages(db, line[0], skill_names=skill_name, rating=rating)
+#         line_data["skills"] = skills_percentages
+
+#         serviceline_percentages.append(line_data)
+
+#     return serviceline_percentages
+
+# async def fetch_service_line_percentages(
+#     db: AsyncSession,
+#     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+# ):
+#     # Fetch total employee count
+#     total_count = db.execute(select(func.count(employeeModel.user_id)))
+#     total_employees = total_count.scalar()
+
+#     # Fetch employee count per service line
+#     query = select(
+#         employeeModel.serviceline_name,
+#         func.count(employeeModel.user_id)
+#     ).group_by(employeeModel.serviceline_name)
+
+#     if serviceline_name:
+#         query = query.where(employeeModel.serviceline_name.in_(serviceline_name))
+
+#     serviceline_counts = db.execute(query)
+#     serviceline_counts = serviceline_counts.all()
+
+#     # Calculate percentage of employees per service line
+#     serviceline_percentages = [
+#         {
+#             "serviceline_name": line[0],
+#             "employee_percentage": (line[1] / total_employees) * 100
+#         }
+#         for line in serviceline_counts
+#     ]
+
+#     return serviceline_percentages
