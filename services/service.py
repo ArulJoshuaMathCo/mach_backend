@@ -518,38 +518,38 @@ async def fetch_employees_by_user_ids(
 #                     })
 #         return results
 
-async def skill_avg_rating(
-    db: AsyncSession,
-    user_ids: List[str],
-    rating: Optional[int]
-) -> List[Dict[str, Optional[float]]]:
-    skill_avg_ratings = []
-    for skill_column in Skills1.__table__.columns:
-        if skill_column.name != 'EMP ID':
-            avg_rating_query = select(
-                func.avg(skill_column).label('average_rating'),
-                func.count().label('employee_count')
-            ).filter(
-                skill_column.isnot(None),
-                Skills1.user_id.in_(user_ids),
-                #skill_column.in_([1, 2, 3, 4, 5])
-            )
-            if rating is not None:
-                avg_rating_query = avg_rating_query.filter(skill_column == rating)
+# async def skill_avg_rating(
+#     db: AsyncSession,
+#     user_ids: List[str],
+#     rating: Optional[int]
+# ) -> List[Dict[str, Optional[float]]]:
+#     skill_avg_ratings = []
+#     for skill_column in Skills1.__table__.columns:
+#         if skill_column.name != 'EMP ID':
+#             avg_rating_query = select(
+#                 func.avg(skill_column).label('average_rating'),
+#                 func.count().label('employee_count')
+#             ).filter(
+#                 skill_column.isnot(None),
+#                 Skills1.user_id.in_(user_ids),
+#                 skill_column.in_([1, 2, 3, 4, 5])
+#             )
+#             if rating is not None:
+#                 avg_rating_query = avg_rating_query.filter(skill_column == rating)
             
-            result = db.execute(avg_rating_query)
-            avg_rating, employee_count = result.one_or_none()
+#             result = db.execute(avg_rating_query)
+#             avg_rating, employee_count = result.one_or_none()
 
-            if avg_rating is not None:
-                skill_avg_ratings.append({
-                    "skill_name": skill_column.name,
-                    "average_rating": avg_rating,
-                    "employee_count": employee_count
-                })
-            else:
-                skill_avg_ratings.append({
-                    "skill_name": skill_column.name,
-                    "average_rating": None,
-                    "employee_count": 0
-                })
-    return skill_avg_ratings
+#             if avg_rating is not None:
+#                 skill_avg_ratings.append({
+#                     "skill_name": skill_column.name,
+#                     "average_rating": avg_rating,
+#                     "employee_count": employee_count
+#                 })
+#             else:
+#                 skill_avg_ratings.append({
+#                     "skill_name": skill_column.name,
+#                     "average_rating": None,
+#                     "employee_count": 0
+#                 })
+#     return skill_avg_ratings

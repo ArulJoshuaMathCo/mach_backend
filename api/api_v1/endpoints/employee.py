@@ -21,6 +21,7 @@ from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
 from services.service import *
 from services.replacement_service import *
+from services.employee_skill_screen import *
 router = APIRouter()
 
 @router.get("/{employee_id}", status_code=200, response_model=EmployeeCreate)
@@ -207,52 +208,38 @@ async def replacement_finder(
     }
 from schemas.employee_skill_screen import EmployeeSkillScreen
 
-@router.get("/employees_skill_screen/",response_model=EmployeeSkillScreen)
+@router.get("/employees_skill_screen/", response_model=EmployeeSkillScreen)
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
-    serviceline: Optional[str] = Query(None, description="Filter by serviceline"),
-    lead: Optional[str] = Query(None, description="Filter by lead"),
-    manager: Optional[str] = Query(None, description="Filter by manager"),
-    capabilities: Optional[str] = Query(None, description="Filter by capabilities"),
-    designation: Optional[str] = Query(None, description="Filter by designation"),
-    validation: Optional[str] = Query(None, description="Filter by validation"),
-    iteration: Optional[str] = Query(None, description="Filter by iteration"),
-    rating: Optional[int] = Query(None, description="Filter by rating")
+    serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+    lead: Optional[List[str]] = Query(None, description="Filter by lead"),
+    manager_name: Optional[List[str]] = Query(None, description="Filter by manager"),
+    capabilities: Optional[List[str]] = Query(None, description="Filter by capabilities"),
+    designation: Optional[List[str]] = Query(None, description="Filter by designation"),
+    validated: Optional[List[str]] = Query(None, description="Filter by validation"),
+    iteration: Optional[List[str]] = Query(None, description="Filter by iteration"),
+    rating: Optional[List[int]] = Query(None, description="Filter by rating")
 ):
-    # Fetch employees
-    query = select(employeeModel).join(Skills1, employeeModel.user_id == Skills1.user_id)
- 
-    if serviceline:
-        query = query.where(employeeModel.serviceline_name == serviceline)
-    if lead:
-        query = query.where(employeeModel.lead == lead)
-    if manager:
-        query = query.where(employeeModel.manager_name == manager)
-    if capabilities:
-        query = query.where(employeeModel.capabilities == capabilities)
-    if designation:
-        query = query.where(employeeModel.designation == designation)
-    if validation:
-        query = query.where(employeeModel.validation == validation)
-    if iteration:
-        query = query.where(employeeModel.iteration == iteration)
-   
-    result = db.execute(query)
-    rows = result.scalars().all()
+    
+    rows =await fetch_employees(db, serviceline_name, lead, manager_name, capabilities, designation, validated, iteration, rating=rating,)
     user_ids = [employee.user_id for employee in rows]
-
-    # Calculate average skill ratings
-    skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
+    # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
+    skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
+    skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
+    if not skill_avg_ratings:
+        raise HTTPException(status_code=404, detail="No skill ratings found")
     # Calculate overall average rating and number of people
-    total_employee_count = sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
-    if total_employee_count > 0:
-        overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / total_employee_count
-    else:
-        overall_average = 0.0
-    number_of_people = len(user_ids)
+    # total_employee_count = sum(skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None)
+    # if total_employee_count > 0:
+    #     overall_average = sum(skill['average_rating'] * skill['employee_count'] for skill in skill_avg_ratings if skill['average_rating'] is not None) / total_employee_count
+    # else:
+    #     overall_average = 0.0
+    #employees= await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating,)
+    overall_avg_rating = await calculate_overall_avg_rating(skill_avg_rating)
+    number_of_people = len(set(user_ids))
    
     return {
-        "overall_average": overall_average,
+        "overall_average": overall_avg_rating,
         "number_of_people": number_of_people,
         "skill_avg_ratings": skill_avg_ratings
     }

@@ -40,7 +40,7 @@ from services.service import run_in_executor
 async def calculate_skill_avg_ratings(
     db: Session,
     user_ids: List[str],
-    skill_names: Optional[List[str]]
+    skill_names: Optional[List[str]]=None
 ) -> Dict[str, Decimal]:
     skill_avg_ratings = {}
 
