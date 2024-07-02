@@ -221,7 +221,7 @@ async def employees_skill_screen(
     rating: Optional[List[int]] = Query(None, description="Filter by rating")
 ):
     
-    rows =await fetch_employees(db, serviceline_name, lead, manager_name, capabilities, designation, validated, iteration, rating=rating,)
+    rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating,)
     user_ids = [employee.user_id for employee in rows]
     # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
