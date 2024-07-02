@@ -9,10 +9,10 @@ from db.base_class import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
-# UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class CRUDBase(Generic[ModelType, CreateSchemaType]):  # 1
+class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):  # 1
     def __init__(self, model: Type[ModelType]):  # 2
 # """
 #         CRUD object with default methods to Create, Read, Update, Delete (CRUD).
@@ -23,10 +23,10 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):  # 1
         self.model = model
 
     async def get(self, db: Session, id: Any) -> Optional[ModelType]:
-        return db.query(self.model).filter(self.model.user_id == id).first()  # 3
+        return db.query(self.model).filter(self.model.id == id).first()  # 3
 
     async def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 4282
+        self, db: Session, *, skip: int = 0, limit: int = 600
     ) -> List[ModelType]:
         return db.query(self.model).offset(skip).limit(limit).all()
 
@@ -37,25 +37,25 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):  # 1
         db.commit()  # 5
         db.refresh(db_obj)
         return db_obj
-    # def update(
-    #     self,
-    #     db: Session,
-    #     *,
-    #     db_obj: ModelType,
-    #     obj_in: Union[UpdateSchemaType, Dict[str, Any]]
-    # ) -> ModelType:
-    #     obj_data = jsonable_encoder(db_obj)
-    #     if isinstance(obj_in, dict):
-    #         update_data = obj_in
-    #     else:
-    #         update_data = obj_in.dict(exclude_unset=True)
-    #     for field in obj_data:
-    #         if field in update_data:
-    #             setattr(db_obj, field, update_data[field])
-    #     db.add(db_obj)
-    #     db.commit()
-    #     db.refresh(db_obj)
-    #     return db_obj
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: ModelType,
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+    ) -> ModelType:
+        obj_data = jsonable_encoder(db_obj)
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+        for field in obj_data:
+            if field in update_data:
+                setattr(db_obj, field, update_data[field])
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
     def remove(self, db: Session, *, id: int) -> ModelType:
         obj = db.query(self.model).get(id)

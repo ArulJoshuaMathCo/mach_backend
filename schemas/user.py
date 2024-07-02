@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     surname: Optional[str]
     email: Optional[EmailStr] = None
     is_superuser: bool = False
+    role:Optional[str]=None
 
 
 # Properties to receive via API on creation
@@ -18,7 +19,11 @@ class UserCreate(UserBase):
 
 # Properties to receive via API on update
 class UserUpdate(UserBase):
-    ...
+    first_name: Optional[str] = None
+    surname: Optional[str] = None
+    email: Optional[EmailStr] = None
+    is_superuser: Optional[bool] = None
+    role: Optional[str] = None
 
 
 class UserInDBBase(UserBase):
@@ -35,4 +40,4 @@ class UserInDB(UserInDBBase):
 
 # Additional properties to return via API
 class User(UserInDBBase):
-    ...
+    pass

@@ -66,6 +66,36 @@ def read_users_me(current_user: User = Depends(deps.get_current_user)):
     user = current_user
     return user
 
+from typing import List
+@router.get("/all", response_model=List[schemas.User])
+async def read_users_all(db:Session= Depends(deps.get_db),
+                #   current_user: User = Depends(deps.get_current_user)
+                  ):
+    """
+    Fetch the current logged in user.
+    """
+
+    users= await crud.user.get_multi(db=db)
+    return users
+
+
+@router.put("/{user_id}/role", response_model=schemas.User)
+async def update_role(
+    *,
+    db: Session = Depends(deps.get_db),
+    user_id: int,
+    role: str,
+    # current_user: User = Depends(deps.get_current_active_manager)
+) -> Any:
+    """
+    Update a user's role.
+    """
+    user = await crud.user.get(db=db, id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_in = schemas.user.UserUpdate(role=role)
+    user = crud.user.update(db=db, db_obj=user, obj_in=user_in)
+    return user
 
 @router.post("/signup", response_model=schemas.User, status_code=201)
 def create_user_signup(

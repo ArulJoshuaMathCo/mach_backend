@@ -3,7 +3,7 @@ from models.skills import Skills1
 from schemas.skills import SkillsBase
 
 
-class CRUDSkills(CRUDBase[Skills1, SkillsBase]):
+class CRUDSkills(CRUDBase[Skills1, SkillsBase,SkillsBase]):
     ...
 
 
