@@ -73,7 +73,7 @@ async def find_nearest_matches(
     employees_with_skills: List[Dict[str, Any]],
     overall_avg_rating: Decimal,
     skill_avg_rating: Dict[str, float],
-    name:Optional[str]
+    name:Optional[str]=None
 ) -> List[Dict[str, Any]]:
     import json
     with open('services/skill_mapping.json', 'r') as file:
@@ -82,7 +82,7 @@ async def find_nearest_matches(
     
     nearest_matches = []
     for employee in employees_with_skills:
-        if employee['average_rating'] >= overall_avg_rating and employee['name'] not in name:
+        if employee['average_rating'] >= overall_avg_rating and (name is None or employee['name'] not in name) :
             matching_skills = 0
             match={}
             for skill_name, skill_value in employee['skills'].items():
