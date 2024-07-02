@@ -198,7 +198,7 @@ async def replacement_finder(
     employees= await fetch_employees(db,designation=designation, account=account,validated=validated,lead=lead,manager_name=manager_name,tenure=tenure,iteration=iteration,capabilities=capabilities,serviceline_name=serviceline_name,function=functions ,skill_name=skill_name,rating=rating,)    
     employees_with_skills = await process_employees_with_skills1(employees,rating=rating,skill_query_name=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_ratings)
-    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,skill_avg_rating=skill_avg_ratings)
+    nearest_matches = await find_nearest_matches(employees_with_skills, overall_avg_rating,skill_avg_rating=skill_avg_ratings,name=name)
     
     return {
         "skill_avg_ratings": skill_avg_ratings,
