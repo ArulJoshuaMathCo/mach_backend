@@ -8,7 +8,6 @@ from sqlalchemy.orm import relationship,column_property
 from models.user import User
 from models.skills import Skills1
 
-
 class MACH_Employee(Base):
     user_id = column_property(Column("EMP ID", String, primary_key=True, default=uuid.uuid4, index=True))
     name = Column(String, index=True)

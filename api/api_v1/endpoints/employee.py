@@ -206,9 +206,9 @@ async def replacement_finder(
         "overall_average_rating": overall_avg_rating,
         "nearest_matches": nearest_matches
     }
-from schemas.employee_skill_screen import EmployeeSkillScreen
+from schemas.employee_skill_screen import EmployeeSkillScreen, EmployeeSkill
 
-@router.get("/employees_skill_screen/", response_model=EmployeeSkillScreen)
+@router.get("/employees_skill_screen/", response_model=List[EmployeeSkillScreen])
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
@@ -242,22 +242,60 @@ async def employees_skill_screen(
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_rating)
     number_of_people = len(set(user_ids))
    
+    # return {
+    #     "overall_average": overall_avg_rating,
+    #     "number_of_people": number_of_people,
+    #     "skill_avg_ratings": skill_avg_ratings
+    # }
+
+    return [
+        EmployeeSkillScreen(
+            overall_average=overall_avg_rating,
+            number_of_people=number_of_people,
+            skill_avg_ratings=[
+                EmployeeSkill(
+                    skill_name=skill['skill_name'],
+                    average_rating=skill['average_rating'],
+                    employee_count=skill['employee_count']
+                )
+                for skill in skill_avg_ratings
+            ]
+        )
+    ]
+
+@router.get("/executive_summary/")
+async def executive_summary(
+    db: AsyncSession = Depends(deps.get_db),
+    serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
+    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name")
+):
+    if skill_name and not serviceline_name:
+        raise HTTPException(status_code=400, detail="Must provide serviceline_name when filtering by skill_name")
+    # serviceline_percentages = await fetch_service_line_percentages(db, serviceline_name=serviceline_name,)
+    
+    # return serviceline_percentages
+
+    rows =await fetch_employees(db, serviceline_name=serviceline_name, skill_name=skill_name)
+    user_ids = [employee.user_id for employee in rows]
+
+    #total_employees = await get_total_employees(db)
+    # skill_percentages = await get_skill_percentages(db, total_employees, user_ids)
+    
+    # return {
+    #     "total_employees": total_employees,
+    #     "skill_percentages": skill_percentages
+    # }
+
+    # skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
+    # organisational_average = await calculate_overall_avg_rating(skill_avg_rating)
+
+    service_line_skill_percentages = await fetch_service_line_percentages(db, user_ids, skill_name=skill_name)
+
     return {
-        "overall_average": overall_avg_rating,
-        "number_of_people": number_of_people,
-        "skill_avg_ratings": skill_avg_ratings
+        #"organisational_average" : organisational_average,
+        "service_line_skill_percentages": service_line_skill_percentages
     }
 
-# @router.get("/executive_summary/")
-# async def executive_summary(
-#     db: AsyncSession = Depends(deps.get_db),
-#     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
-#     skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
-#     rating: Optional[List[int]] = Query(None, description="Filter by rating")
-# ):
-#     serviceline_percentages = await fetch_service_line_percentages(db, serviceline_name=serviceline_name, skill_name=skill_name, rating=rating)
-    
-#     return serviceline_percentages
 
 @router.post("/", status_code=201, response_model=MACH_Employee)
 async def create_employee(
