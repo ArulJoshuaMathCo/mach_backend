@@ -19,6 +19,7 @@ from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.sme_finder import SmeFinder, SkillDetail
 from schemas.talent_finder import TalentFinder
 from schemas.Employee_with_skills import SkillBase
+from schemas.executive_sumary import ExecutiveSummary
 from services.service import *
 from services.replacement_service import *
 from services.employee_skill_screen import *
@@ -263,7 +264,7 @@ async def employees_skill_screen(
         )
     ]
 
-@router.get("/executive_summary/")
+@router.get("/executive_summary/", response_model=ExecutiveSummary)
 async def executive_summary(
     db: AsyncSession = Depends(deps.get_db),
     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
@@ -288,12 +289,20 @@ async def executive_summary(
 
     # skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
     # organisational_average = await calculate_overall_avg_rating(skill_avg_rating)
-
+    skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
+    skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
+    if not skill_avg_ratings:
+        raise HTTPException(status_code=404, detail="No skill ratings found")
+    number_of_people = len(set(user_ids))
     service_line_skill_percentages = await fetch_service_line_percentages(db, user_ids, skill_name=skill_name)
+    overall_avg_rating = await calculate_overall_avg_rating(skill_avg_rating)
 
     return {
         #"organisational_average" : organisational_average,
-        "service_line_skill_percentages": service_line_skill_percentages
+        "service_line_skill_percentages": service_line_skill_percentages,
+        "overall_average": overall_avg_rating,
+        "number_of_people": number_of_people,
+        "skill_avg_ratings": skill_avg_ratings
     }
 
 

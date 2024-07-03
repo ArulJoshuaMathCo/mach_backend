@@ -668,6 +668,7 @@ async def fetch_service_line_percentages(
     serviceline_percentages = [
         {
             "serviceline_name": line[0],
+            "number_of_employees": line[1],
             "employee_percentage": (line[1] / total_employees) * 100,
             "average_rating": await get_average_rating_for_serviceline(db, line[0], user_ids),
             "skill_percentages": await get_skill_percentages_by_serviceline(db, line[0], user_ids, skill_name=skill_name)  # Fetch skill percentages for each service line
@@ -711,6 +712,7 @@ async def get_skill_percentages_by_serviceline(db: AsyncSession, serviceline_nam
             
             skill_percentages.append({
                 "skill": skill_column.name,
+                "number_of_employees": skill_count,
                 "percentage": (skill_count / total_serviceline_employees) * 100,
                 "average_rating": average_rating,
                 "rating_percentages": await get_skill_rating_percentages(db, serviceline_name, skill_column.name, user_ids)
@@ -740,6 +742,7 @@ async def get_skill_rating_percentages(db: AsyncSession, serviceline_name: str, 
     for rating, count in rating_counts:
         skill_rating_percentages.append({
             "rating": rating,
+            "number_of_employees": count,
             "percentage": (count / total_serviceline_employees) * 100
         })
     
