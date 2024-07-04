@@ -209,7 +209,7 @@ async def replacement_finder(
     }
 from schemas.employee_skill_screen import EmployeeSkillScreen, EmployeeSkill
 
-@router.get("/employees_skill_screen/", response_model=List[EmployeeSkillScreen])
+@router.get("/employees_skill_screen/")
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
@@ -231,24 +231,27 @@ async def employees_skill_screen(
     # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
     employees_with_skills = await process_employees_with_skills1(rows,rating=rating,skill_query_name=skill_name)
     print(employees_with_skills)
-    # skill_info = { }
-    # for employee in rows:
-    #     result={}
-    #     result['serviceline']=employee.serviceline_name
-    #     result["capabilities"]=employee.capabilities
-    #     result["designation"]=employee.designation
-    #     result["lead"]=employee.lead
-    #     result["manager"]=employee.manager_name
+    skill_info = {}
+    for employee in rows:
+        result={}
+        result['serviceline']=employee.serviceline_name
+        result["capabilities"]=employee.capabilities
+        result["designation"]=employee.designation
+        result["lead"]=employee.lead
+        result["validated"]=employee.validation
+        result["iteration"]=employee.iteration
+        result["account"]=employee.account
+        result["manager"]=employee.manager_name
         
-    #     for skill in employee.skills:
-    #         for skill_attr, skill_value in skill.__dict__.items() :
-    #             skill_data ={}
-    #             if skill_attr!='user_id':
-    #                 skill_data[skill_attr]=skill_value
-    #     result["skills"]=skill_data
-    #     #rating["rating"]=employee.
-    #     skill_info[employee.name]= result
-    # print(skill_info)
+        for skill in employee.skills:
+            for skill_attr, skill_value in skill.__dict__.items() :
+                skill_data ={}
+                if skill_attr!='user_id':
+                    skill_data[skill_attr]=skill_value
+        result["skills"]=skill_data
+        #rating["rating"]=employee.
+        skill_info[employee.name]= result
+    print(skill_info)
     
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
     skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
@@ -264,26 +267,27 @@ async def employees_skill_screen(
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_rating)
     number_of_people = len(set(user_ids))
    
-    # return {
-    #     "overall_average": overall_avg_rating,
-    #     "number_of_people": number_of_people,
-    #     "skill_avg_ratings": skill_avg_ratings
-    # }
+    return [{
+        "overall_average": overall_avg_rating,
+        "number_of_people": number_of_people,
+        "skill_avg_ratings": skill_avg_ratings,
+        "skill_info" : [skill_info]
+    }]
 
-    return [
-        EmployeeSkillScreen(
-            overall_average=overall_avg_rating,
-            number_of_people=number_of_people,
-            skill_avg_ratings=[
-                EmployeeSkill(
-                    skill_name=skill['skill_name'],
-                    average_rating=skill['average_rating'],
-                    employee_count=skill['employee_count']
-                )
-                for skill in skill_avg_ratings
-            ]
-        )
-    ]
+    # return [
+    #     EmployeeSkillScreen(
+    #         overall_average=overall_avg_rating,
+    #         number_of_people=number_of_people,
+    #         skill_avg_ratings=[
+    #             EmployeeSkill(
+    #                 skill_name=skill['skill_name'],
+    #                 average_rating=skill['average_rating'],
+    #                 employee_count=skill['employee_count']
+    #             )
+    #             for skill in skill_avg_ratings
+    #         ]
+    #     )
+    # ]
 
 @router.get("/executive_summary/", response_model=ExecutiveSummary)
 async def executive_summary(
