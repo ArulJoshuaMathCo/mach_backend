@@ -222,36 +222,48 @@ async def employees_skill_screen(
     rating: Optional[List[int]] = Query(None, description="Filter by rating"),
     name: Optional[List[str]] = Query(None, description="Filter by employee name"),
     account: Optional[List[str]] = Query(None, description="Filter by employee account"),
-    skill_name: Optional[List[str]] = Query(None, description="Filter by skill name"),
-
 ):
     
-    rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating, name=name, account=account, skill_name=skill_name)
+    rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating, name=name, account=account,)
     user_ids = [employee.user_id for employee in rows]
     # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
-    employees_with_skills = await process_employees_with_skills1(rows,rating=rating,skill_query_name=skill_name)
-    print(employees_with_skills)
-    skill_info = {}
-    for employee in rows:
-        result={}
-        result['serviceline']=employee.serviceline_name
-        result["capabilities"]=employee.capabilities
-        result["designation"]=employee.designation
-        result["lead"]=employee.lead
-        result["validated"]=employee.validation
-        result["iteration"]=employee.iteration
-        result["account"]=employee.account
-        result["manager"]=employee.manager_name
+    employees_with_skills = await process_employees_with_skills1(rows,rating=rating,)
+    # skill_info=[]
+    # for employee in employees:
+    #     skill_info.append({
+    #             "serviceline_name": employees.ser,
+    #             "lead": employees_with_skills.lead,
+    #             "manager_name": employees_with_skills.manager_name,
+    #             "capabilities": employees_with_skills.capabilities,
+    #             "designation": employees_with_skills.designation,
+    #             "validated": employees_with_skills.validation,
+    #             "iteration": employees_with_skills.iteration,
+    #             "name": employees_with_skills.name,
+    #             "account": employees_with_skills.account
+    #         })
+
+    # skill_info = {}
+    # for employee in rows:
+    #     result={}
+    #     result["name"]=employee.name
+    #     result['serviceline']=employee.serviceline_name
+    #     result["capabilities"]=employee.capabilities
+    #     result["designation"]=employee.designation
+    #     result["lead"]=employee.lead
+    #     result["validated"]=employee.validation
+    #     result["iteration"]=employee.iteration
+    #     result["account"]=employee.account
+    #     result["manager"]=employee.manager_name
         
-        for skill in employee.skills:
-            for skill_attr, skill_value in skill.__dict__.items() :
-                skill_data ={}
-                if skill_attr!='user_id':
-                    skill_data[skill_attr]=skill_value
-        result["skills"]=skill_data
-        #rating["rating"]=employee.
-        skill_info[employee.name]= result
-    print(skill_info)
+    #     for skill in employee.skills:
+    #         for skill_attr, skill_value in skill.__dict__.items() :
+    #             skill_data ={}
+    #             if skill_attr!='user_id':
+    #                 skill_data[skill_attr]=skill_value
+    #     result["skills"]=skill_data
+    #     #rating["rating"]=employee.
+    #     skill_info[employee.name] = result
+    # print(skill_info)
     
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
     skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
@@ -271,7 +283,7 @@ async def employees_skill_screen(
         "overall_average": overall_avg_rating,
         "number_of_people": number_of_people,
         "skill_avg_ratings": skill_avg_ratings,
-        "skill_info" : [skill_info]
+        "employee_info" : employees_with_skills
     }]
 
     # return [
