@@ -227,7 +227,7 @@ async def employees_skill_screen(
     rows =await fetch_employees(db, serviceline_name=serviceline_name, lead=lead, manager_name=manager_name, capabilities=capabilities, designation=designation, validated=validated, iteration=iteration, rating=rating, name=name, account=account,)
     user_ids = [employee.user_id for employee in rows]
     # skill_avg_ratings = await skill_avg_rating(db, user_ids, rating)
-    employees_with_skills = await process_employees_with_skills1(rows,rating=rating,)
+    #employees_with_skills = await process_employees_with_skills1(rows,rating=rating,)
     # skill_info=[]
     # for employee in employees:
     #     skill_info.append({
@@ -242,28 +242,28 @@ async def employees_skill_screen(
     #             "account": employees_with_skills.account
     #         })
 
-    # skill_info = {}
-    # for employee in rows:
-    #     result={}
-    #     result["name"]=employee.name
-    #     result['serviceline']=employee.serviceline_name
-    #     result["capabilities"]=employee.capabilities
-    #     result["designation"]=employee.designation
-    #     result["lead"]=employee.lead
-    #     result["validated"]=employee.validation
-    #     result["iteration"]=employee.iteration
-    #     result["account"]=employee.account
-    #     result["manager"]=employee.manager_name
+    skill_info = []
+    for employee in rows:
+        result={}
+        result["name"]=employee.name
+        result['serviceline']=employee.serviceline_name
+        result["capabilities"]=employee.capabilities
+        result["designation"]=employee.designation
+        result["lead"]=employee.lead
+        result["validated"]=employee.validation
+        result["iteration"]=employee.iteration
+        result["account"]=employee.account
+        result["manager"]=employee.manager_name
         
-    #     for skill in employee.skills:
-    #         for skill_attr, skill_value in skill.__dict__.items() :
-    #             skill_data ={}
-    #             if skill_attr!='user_id':
-    #                 skill_data[skill_attr]=skill_value
-    #     result["skills"]=skill_data
-    #     #rating["rating"]=employee.
-    #     skill_info[employee.name] = result
-    # print(skill_info)
+        for skill in employee.skills:
+            for skill_attr, skill_value in skill.__dict__.items() :
+                skill_data ={}
+                if skill_attr!='user_id':
+                    skill_data[skill_attr]=skill_value
+        result["skills"]=skill_data
+        #rating["rating"]=employee.
+        skill_info.append(result)
+    print(skill_info)
     
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
     skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
@@ -283,7 +283,7 @@ async def employees_skill_screen(
         "overall_average": overall_avg_rating,
         "number_of_people": number_of_people,
         "skill_avg_ratings": skill_avg_ratings,
-        "employee_info" : employees_with_skills
+        "skill_info" : skill_info
     }]
 
     # return [
@@ -326,12 +326,12 @@ async def executive_summary(
 
     # skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
     # organisational_average = await calculate_overall_avg_rating(skill_avg_rating)
-    skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
-    skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
+    skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids, skill_names=skill_name)
+    skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids, skill_names=skill_name)
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
     number_of_people = len(set(user_ids))
-    service_line_skill_percentages = await fetch_service_line_percentages(db, user_ids, skill_name=skill_name)
+    service_line_skill_percentages = await fetch_service_line_percentages(db, user_ids, skill_names=skill_name)
     overall_avg_rating = await calculate_overall_avg_rating(skill_avg_rating)
 
     return {
@@ -675,3 +675,34 @@ async def search_employees(
     results = filter(lambda employee: keyword.lower() in employee.name.lower(), employees)
 
     return {"results": list(results)[:5]}
+
+@router.get("/designation-count/")
+async def get_designation_counts(
+    account: str = Query(None, description="Filter by account name"),
+    manager_name = Query(None, description="Filter by manager name"),
+    db: Session = Depends(deps.get_db)
+):
+   
+    query = select(
+        employeeModel.designation,
+        func.count(employeeModel.designation)
+    ).group_by(employeeModel.designation)
+
+    if account:
+        query = query.where(employeeModel.account == account)
+    if manager_name:
+        query = query.where(employeeModel.manager_name == manager_name)
+
+    result = db.execute(query)
+    designation_counts = result.fetchall()
+    print(designation_counts)
+
+    # Format results into desired JSON structure
+    formatted_counts = [
+        {"designation": designation, "count": count}
+        for designation, count in designation_counts
+    ]
+
+    return {"designation_counts": formatted_counts}
+
+
