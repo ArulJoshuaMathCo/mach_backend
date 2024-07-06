@@ -93,9 +93,15 @@ async def find_nearest_matches(
                     match[skill_name]=skill_value
             employee['matching_skills'] = matching_skills
             employee["matched_skills"]=match
-            if matching_skills!=0:
+            if matching_skills > 0:
+                # Calculate confidence score
+                confidence_score = (matching_skills / len(skill_avg_rating)) * (employee['average_rating'] / overall_avg_rating)
+                employee['confidence_score'] = confidence_score
                 nearest_matches.append(employee)
-    return nearest_matches
+    
+    # Sort by confidence score in descending order
+    nearest_matches.sort(key=lambda x: x['confidence_score'], reverse=True)
+    return nearest_matches[:10]
 
 async def process_employees_with_skills(
     employees: List[employeeModel],
@@ -190,8 +196,12 @@ async def rf_fetch_employees(
     return result.scalars().all()
 
 async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
-    total_rating = sum(skill_avg_ratings.values())
-    total_skills = len(skill_avg_ratings)
+    # Filter out zero values
+    non_zero_ratings = [rating for rating in skill_avg_ratings.values() if rating > 0]
+    
+    total_rating = sum(non_zero_ratings)
+    total_skills = len(non_zero_ratings)
+    
     return total_rating / total_skills if total_skills > 0 else 0
 
 # async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float) -> List[Dict[str, Any]]:

@@ -116,6 +116,92 @@ def create_user_signup(
     user = crud.user.create(db=db, obj_in=user_in)
 
     return user
+
+
+from fastapi_sso.sso.microsoft import MicrosoftSSO
+from starlette.requests import Request
+from dotenv import load_dotenv
+from fastapi.responses import RedirectResponse
+from core.auth import create_access_token
+import os
+from urllib.parse import urlencode
+import requests
+SESSION_COOKIE_NAME='access_token'
+OAUTH_TENANT = '4bf30310-e4f1-4658-9e34-9e8a5a193ed1'
+OAUTH_APPLICATION_ID = 'aa4b401e-421b-426d-a170-f8f50e7c8028'
+OAUTH_CLIENT_SECRET = 'a3c0958bb2bc8dd0be54b6c99f86a10449bbdc494aab440a5d7f93b642dea007'
+REDIRECT_URI = f"http://127.0.0.1:8000/auth/callback"
+
+AUTHORITY = f"https://login.microsoftonline.com/{OAUTH_TENANT}"
+AUTHORIZE_URL = f"{AUTHORITY}/oauth2/v2.0/authorize"
+TOKEN_URL = f"{AUTHORITY}/oauth2/v2.0/token"
+USER_INFO_URL = "https://graph.microsoft.com/v1.0/me"
+
+# router = APIRouter(prefix="/v1/microsoft")
+
+@router.get("/mlogin")
+async def microsoft_login():
+    params = {
+        "client_id": OAUTH_APPLICATION_ID,
+        "response_type": "code",
+        "redirect_uri": REDIRECT_URI,
+        "response_mode": "query",
+        "scope": "openid User.Read email",
+        "state": "12345"  # You can use a more secure method to generate state
+    }
+    url = f"{AUTHORIZE_URL}?{urlencode(params)}"
+    print(url)
+    return RedirectResponse(url)
+
+@router.get("/callback")
+async def microsoft_callback(request: Request, db: Session = Depends(deps.get_db)):
+    print("&&&&&&&&&&&&&&&")
+    """Process login response from Microsoft and return user info"""
+    code = request.query_params.get("code")
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Code not found in request")
+
+    token_data = {
+        "client_id": OAUTH_APPLICATION_ID,
+        "client_secret": OAUTH_CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI,
+        "scope": "openid User.Read email"
+    }
+
+    response = requests.post(TOKEN_URL, data=token_data)
+    token_response = response.json()
+
+    if "access_token" not in token_response:
+        raise HTTPException(status_code=400, detail="Failed to obtain access token")
+    print("************")
+
+    access_token = token_response["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    user_info_response = requests.get(USER_INFO_URL, headers=headers)
+    user_info = user_info_response.json()
+
+    user_email = user_info.get("mail") or user_info.get("userPrincipalName")
+    user_display_name = user_info.get("displayName")
+    user_provider = "microsoft"
+
+    user_stored = crud.user.get_by_email(db, user_email,)
+    if not user_stored:
+        user_to_add = schemas.user.UserCreate(
+            email=user_email if user_email else user_display_name,
+            first_name=user_display_name
+        )
+        user_stored = crud.user.create(db, user_to_add)
+
+    jwt_token = create_access_token(data={"sub": user_stored.email, })
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    response.set_cookie(SESSION_COOKIE_NAME, jwt_token)
+    return response
+
+
 '''
 Using scopes for authorization
 Refresh tokens

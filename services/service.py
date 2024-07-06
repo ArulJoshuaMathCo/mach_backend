@@ -262,8 +262,9 @@ async def process_employees_with_skills1(
                 for skill_attr, skill_value in skill.__dict__.items():
                     if skill_attr != 'user_id' and skill_attr != '_sa_instance_state' and isinstance(skill_value, (int, float)):  # Exclude user_id column
 
-                        total_skills_rated += 1
-                        total_rating += skill_value
+                        if skill_value is not None:
+                            total_skills_rated += 1
+                            total_rating += skill_value
 
                         # Get the actual column name
                         skill_column_name = attribute_to_column.get(skill_attr, None)

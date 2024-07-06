@@ -3,8 +3,8 @@ from middleware.middleware import add_middlewares
 from api.api_v1.api import api_router
 from core.config import settings
 from models.token import Base
-from db.session import engine
-Base.metadata.create_all(bind=engine)
+# from db.session import engine
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MACH API")
 add_middlewares(app)
