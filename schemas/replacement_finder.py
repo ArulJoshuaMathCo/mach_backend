@@ -20,6 +20,7 @@ class ReplacementFinder(BaseModel):
     skills: Dict[str, int]
     matching_skills: float
     matched_skills:Dict[str, int]
+    confidence_score:float
 
 class ReplacementFinderResponse(BaseModel):
     skill_avg_ratings: Dict[str, float]

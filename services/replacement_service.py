@@ -66,7 +66,7 @@ async def find_nearest_matches(
             if matching_skills > 0:
                 # Calculate confidence score
                 confidence_score = (matching_skills / len(skill_avg_rating)) * (employee['average_rating'] / overall_avg_rating)
-                employee['confidence_score'] = confidence_score
+                employee['confidence_score'] = confidence_score*100
                 nearest_matches.append(employee)
     
     # Sort by confidence score in descending order

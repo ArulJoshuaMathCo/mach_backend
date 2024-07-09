@@ -36,7 +36,6 @@ def login(
     user = authenticate(email=form_data.username, password=form_data.password, db=db)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
     access_token = create_access_token(sub=user.email)
     refresh_token = create_refresh_token(sub=user.email)
 
@@ -162,7 +161,7 @@ async def microsoft_callback(token_request: TokenRequest, db: Session = Depends(
             user.is_superuser = is_superuser
             db.commit()
 
-        access_token = create_access_token(sub=email)
+        access_token = create_access_token(sub=user.id)
         return JSONResponse(content={"access_token": access_token}, status_code=status.HTTP_200_OK)
 
     except Exception as e:
