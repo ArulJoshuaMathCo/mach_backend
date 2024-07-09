@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from middleware.middleware import add_middlewares
-from api.api_v1.api import api_router
+from api.api import api_router
 from core.config import settings
 from models.token import Base
 # from db.session import engine

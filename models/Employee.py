@@ -2,8 +2,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from db.base_class import Base
-from db.session import engine
-Base.metadata.create_all(bind=engine)
+# from db.session import engine
+# Base.metadata.create_all(bind=engine)
 from sqlalchemy.orm import relationship,column_property
 from models.user import User
 from models.skills import Skills1
