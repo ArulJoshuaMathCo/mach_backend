@@ -202,6 +202,7 @@ async def process_employees_with_skills1(
                                     skills_data[skill_column_name] = skill_value
                         elif skill_query_name is not None and rating is None:
                             for query_skill in skill_query_name:
+                                print(query_skill)
                                 if query_skill is None or query_skill == skill_column_name:
                                     skills_data[skill_column_name] = skill_value
                         else:
@@ -211,24 +212,24 @@ async def process_employees_with_skills1(
             average_rating = (total_rating / total_skills_rated) if total_skills_rated > 0 else 0
         else:
             average_rating = 0
-
-        employees_with_skills.append({
-            "user_id": employee.user_id,
-            "name": employee.name,
-            "designation": employee.designation,
-            "account": employee.account,
-            "lead": employee.lead,
-            "manager_name": employee.manager_name,
-            "tenure": employee.tenure,
-            "iteration": employee.iteration,
-            "capabilities": employee.capabilities,
-            "serviceline_name": employee.serviceline_name,
-            "validation": employee.validation,
-            "functions": employee.function,
-            "skills_count": total_skills_rated,
-            "average_rating": average_rating,
-            "skills": skills_data
-        })
+        if (skill_query_name and skills_data.keys()) or skill_query_name is None:
+            employees_with_skills.append({
+                "user_id": employee.user_id,
+                "name": employee.name,
+                "designation": employee.designation,
+                "account": employee.account,
+                "lead": employee.lead,
+                "manager_name": employee.manager_name,
+                "tenure": employee.tenure,
+                "iteration": employee.iteration,
+                "capabilities": employee.capabilities,
+                "serviceline_name": employee.serviceline_name,
+                "validation": employee.validation,
+                "functions": employee.function,
+                "skills_count": total_skills_rated,
+                "average_rating": average_rating,
+                "skills": skills_data
+            })
 
     return employees_with_skills
 
