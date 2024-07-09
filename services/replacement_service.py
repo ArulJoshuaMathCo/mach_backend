@@ -7,35 +7,7 @@ import asyncio
 from decimal import Decimal
 from models.Employee import MACH_Employee as employeeModel
 from models.skills import Skills1
-from schemas.Employee_with_skills import SkillBase
 from services.service import run_in_executor
-# async def map_skills_rf(filtered_skills: List[Skills1]) -> Dict:
-#     skills_map = {}
-#     for skill in filtered_skills:
-#         if skill.user_id not in skills_map:
-#             skills_map[skill.user_id] = []
-#         skills_map[skill.user_id].append(SkillBase(
-#             Python=skill.python,
-#             SQL=skill.sql,
-#             Excel=skill.excel,
-#             Storyboarding=skill.storyboarding,
-#             BusinessCommunication=skill.business_communication,
-#             Result_Orientation=skill.result_orientation,
-#             Quality_Focus=skill.quality_focus,
-#             Effective_Communication=skill.effective_communication,
-#             Work_Management_effectiveness=skill.work_management_and_effectiveness,
-#             ClientCentric=skill.clientcentric,
-#             GenAI=skill.genai,
-#             NucliOS=skill.nuclios
-#         ))
-#     return skills_map
-
-# async def fetch_employees_average(
-#     db: Session,
-#     user_ids: List[str]
-# ) -> List[Any]:
-#     query = db.query(employeeModel).filter(employeeModel.user_id.in_(user_ids))
-#     return await run_in_executor(query.all)
 
 async def calculate_skill_avg_ratings(
     db: Session,
@@ -66,8 +38,6 @@ async def calculate_skill_avg_ratings(
                 skill_avg_ratings[skill_column.name] = float(0)
 
     return skill_avg_ratings
-# async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> float:
-#     return sum(skill_avg_ratings.values()) / len(skill_avg_ratings) if skill_avg_ratings else float(0)
 
 async def find_nearest_matches(
     employees_with_skills: List[Dict[str, Any]],
@@ -130,32 +100,7 @@ async def process_employees_with_skills(
             "average_rating": average_rating
         })
     return employees_with_skills
-# async def calculate_skill_avg_ratings(db: Session, user_ids: List[str]) -> Dict[str, float]:
-#     skill_avg_ratings = {}
-#     skills_query = select(Skills1).where(Skills1.user_id.in_(user_ids))
-#     skills_result =  db.execute(skills_query)
-#     skills = skills_result.scalars().all()
 
-#     skill_totals = {}
-#     skill_counts = {}
-
-#     # Define the list of skill attributes to check
-#     skill_attributes = [column.name for column in Skills1.__table__.columns if column.name != 'user_id']
-
-#     for skill in skills:
-#         for skill_name in skill_attributes:
-#             skill_value = getattr(skill, skill_name.lower(), None)
-#             if skill_value is not None:
-#                 if skill_name not in skill_totals:
-#                     skill_totals[skill_name] = 0
-#                     skill_counts[skill_name] = 0
-#                 skill_totals[skill_name] += skill_value
-#                 skill_counts[skill_name] += 1
-
-#     for skill_name in skill_totals.keys():
-#         skill_avg_ratings[skill_name] = skill_totals[skill_name] / skill_counts[skill_name]
-
-#     return skill_avg_ratings
 async def rf_fetch_employees(
     db: Session,
     name: Optional[List[str]] = None,
@@ -203,8 +148,3 @@ async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> f
     total_skills = len(non_zero_ratings)
     
     return total_rating / total_skills if total_skills > 0 else 0
-
-# async def find_nearest_matches(employees_with_skills: List[Dict[str, Any]], overall_avg_rating: float) -> List[Dict[str, Any]]:
-#     # Example implementation for finding nearest matches based on average rating
-#     employees_with_skills.sort(key=lambda x: abs(x['average_rating'] - overall_avg_rating))
-#     return employees_with_skills[:]  # Return top 5 nearest matches
