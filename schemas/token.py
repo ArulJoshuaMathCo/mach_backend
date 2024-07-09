@@ -17,3 +17,6 @@ class TokenInDBBase(TokenBase):
  
 class Token(TokenInDBBase):
     pass
+
+class TokenRequest(BaseModel):
+    token: str

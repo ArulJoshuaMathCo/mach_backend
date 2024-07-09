@@ -36,6 +36,7 @@ async def fetch_employee(
     *,
     employee_id: str,
     db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ) -> Any:
     result = await crud.employee.get(db=db, id=employee_id)
     if not result:
@@ -47,6 +48,7 @@ async def fetch_employee(
 async def root(
     request: Request,
     db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
     result = await crud.employee.get_multi(db=db)
     return { "employees": result}

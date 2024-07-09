@@ -1,6 +1,11 @@
+import datetime
+import re
 from typing import Any
-
+from jwt import encode,decode
+import logging
+from schemas.user import UserInDB
 from fastapi import APIRouter, Depends, HTTPException,status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm.session import Session
 import crud
@@ -11,10 +16,12 @@ from core.auth import (
     authenticate,
     create_access_token,create_refresh_token
 )
+from schemas.token import TokenRequest
 from models.user import User
 from models.token import TokenData
+from core.security import get_password_hash
 from sqlalchemy.future import select
-from core.auth_bearer import jwt_bearer
+from core.auth_bearer import jwt_bearer,decodeJWT
 router = APIRouter()
 
 
@@ -30,15 +37,15 @@ def login(
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
-    access_token = create_access_token(sub=user.id)
-    refresh_token = create_refresh_token(sub=user.id)
+    access_token = create_access_token(sub=user.email)
+    refresh_token = create_refresh_token(sub=user.email)
 
     token_in = TokenData(id=user.id, token=access_token, refresh_token=refresh_token, is_active=True)
     crud.crud_token.token.create(db=db, token_in=token_in)
 
     return {
-        "access_token": create_access_token(sub=user.id),
-        "refresh_token": create_refresh_token(sub=user.id),
+        "access_token": create_access_token(sub=user.email),
+        "refresh_token": create_refresh_token(sub=user.email),
         "token_type": "bearer",
     }
 
@@ -69,7 +76,7 @@ def read_users_me(current_user: User = Depends(deps.get_current_user)):
 from typing import List
 @router.get("/all", response_model=List[schemas.User])
 async def read_users_all(db:Session= Depends(deps.get_db),
-                #   current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_active_manager)
                   ):
     """
     Fetch the current logged in user.
@@ -85,7 +92,7 @@ async def update_role(
     db: Session = Depends(deps.get_db),
     user_id: int,
     role: str,
-    # current_user: User = Depends(deps.get_current_active_manager)
+    current_user: User = Depends(deps.get_current_active_manager)
 ) -> Any:
     """
     Update a user's role.
@@ -113,9 +120,74 @@ def create_user_signup(
             status_code=400,
             detail="The user with this email already exists in the system",
         )
+    regex = r"\b[A-Za-z0-9._%+-]+@mathco+\.[A-Z|a-z]{2,}\b"
+    email= user_in.email
+    if not re.fullmatch(regex, email):
+        raise HTTPException(status_code=400,detail="error: mail does not belong to the organization")
     user = crud.user.create(db=db, obj_in=user_in)
 
     return user
+secret = "55f6801c3187b2360340a676788b6bff"
+@router.post("/callback")
+async def microsoft_callback(token_request: TokenRequest, db: Session = Depends(deps.get_db)):
+    token = token_request.token
+
+    try:
+        user_data = decode_token(token)
+        print(user_data)
+        email = user_data.get("preferred_username")
+        first_name = user_data.get("name")
+        surname = " "
+        is_superuser = False
+        roles= "user"
+        # Generate a dummy password if not provided
+        hashed_password = get_password_hash("12345678")
+        # Check if user already  exists
+        user = db.query(User).filter(User.email == email).first()
+        print(user)
+        if not user:
+            user = User(
+                email=email,
+                first_name=first_name,
+                surname=surname,
+                is_superuser=is_superuser,
+                hashed_password=hashed_password,
+                role=roles,
+            )
+            db.add(user)
+            db.commit()
+        else:
+            user.first_name = first_name
+            user.surname = surname
+            user.is_superuser = is_superuser
+            db.commit()
+
+        access_token = create_access_token(sub=email)
+        return JSONResponse(content={"access_token": access_token}, status_code=status.HTTP_200_OK)
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+
+def encode_payload(
+    payload: dict, secret: str = secret, algorithm: str = "RS256"
+) -> str:
+    return encode(payload, secret, algorithm=algorithm)
+def decode_token(token: str):
+    try:
+        return decode(
+            jwt=token,
+            key=None,
+            algorithms=['RS256'],
+            options={"verify_signature": False},
+        )
+    except Exception as e:
+        logging.exception(e)
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            message={"error"},
+        )
 
 '''
 Using scopes for authorization
