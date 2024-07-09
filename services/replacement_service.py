@@ -33,6 +33,7 @@ async def calculate_skill_avg_ratings(
             
             avg_rating = await run_in_executor(avg_rating_query.scalar)
             if avg_rating is not None:
+                avg_rating = round(avg_rating, 3)
                 skill_avg_ratings[skill_column.name] = avg_rating
             else:
                 skill_avg_ratings[skill_column.name] = float(0)
@@ -146,5 +147,8 @@ async def calculate_overall_avg_rating(skill_avg_ratings: Dict[str, float]) -> f
     
     total_rating = sum(non_zero_ratings)
     total_skills = len(non_zero_ratings)
+
+    overall_avg_rating = total_rating / total_skills if total_skills > 0 else 0
+    rounded_overall_avg_rating = round(overall_avg_rating, 3)
     
-    return total_rating / total_skills if total_skills > 0 else 0
+    return rounded_overall_avg_rating

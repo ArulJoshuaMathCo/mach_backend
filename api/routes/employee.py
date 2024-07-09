@@ -12,7 +12,9 @@ from typing import List
 from schemas.employee import MACH_Employee,employeeSearchResults
 from schemas.replacement_finder import ReplacementFinderResponse
 from schemas.talent_finder import TalentFinder
-from schemas.executive_sumary import ExecutiveSummary
+from schemas.executive_sumary import *
+from schemas.designation_count import *
+from schemas.employee_skill_screen import OverallSkillRatings, SkillAvgRating
 from services.service import *
 from services.replacement_service import *
 from services.employee_skill_screen import *
@@ -83,9 +85,8 @@ async def replacement_finder(
         "overall_average_rating": overall_avg_rating,
         "nearest_matches": nearest_matches
     }
-from schemas.employee_skill_screen import EmployeeSkillScreen, EmployeeSkill
 
-@router.get("/employees_skill_screen/")
+@router.get("/employees_skill_screen/", response_model=List[OverallSkillRatings])
 async def employees_skill_screen(
     db: AsyncSession = Depends(deps.get_db),
     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
@@ -118,7 +119,7 @@ async def employees_skill_screen(
         "skill_avg_ratings": skill_avg_ratings,
     }]
 
-@router.get("/executive_summary/")
+@router.get("/executive_summary/", response_model=ResponseData)
 async def executive_summary(
     db: AsyncSession = Depends(deps.get_db),
     serviceline_name: Optional[List[str]] = Query(None, description="Filter by serviceline"),
@@ -163,7 +164,7 @@ async def search_employees(
 
     return {"results": list(results)[:5]}
 
-@router.get("/designation-count/")
+@router.get("/designation-count/", response_model=DesignationCounts)
 async def get_designation_counts(
     account: Optional[str] = Query(None, description="Filter by account name"),
     manager_name: Optional[str] = Query(None, description="Filter by manager name"),

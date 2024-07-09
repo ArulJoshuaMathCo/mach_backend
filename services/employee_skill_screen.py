@@ -36,9 +36,10 @@ async def calculate_skill_avg_ratings_with_counts(
             employee_count = await run_in_executor(employee_count_query.scalar)
 
             if skill_avg_ratings[skill_column.name] is not None:
+                avg_rating = round(skill_avg_ratings[skill_column.name], 3)
                 skill_avg_ratings_with_counts.append({
                     "skill_name": skill_column.name,
-                    "average_rating": skill_avg_ratings[skill_column.name],
+                    "average_rating": avg_rating,
                     "employee_count": employee_count,
                 })
             else:
@@ -91,6 +92,9 @@ async def calculate_skill_avg_ratings_with_count(
                 else:
                     average_rating_for_rating = None
 
+                if average_rating_for_rating is not None:
+                    average_rating_for_rating = round(average_rating_for_rating, 3)
+
                 rating_counts_and_averages.append({
                     "rating": rating,
                     "average_rating": average_rating_for_rating,
@@ -100,7 +104,7 @@ async def calculate_skill_avg_ratings_with_count(
             if skill_avg_ratings[skill_column.name] is not None:
                 skill_avg_ratings_with_counts.append({
                     "skill_name": skill_column.name,
-                    "average_rating": skill_avg_ratings[skill_column.name],
+                    "average_rating": round(skill_avg_ratings[skill_column.name], 3),
                     "employee_count": employee_count,
                     "rating_details": rating_counts_and_averages
                 })
