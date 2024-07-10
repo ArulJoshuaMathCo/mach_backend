@@ -267,7 +267,7 @@ async def fetch_service_line_percentages(
         {
             "serviceline_name": line[0],
             "number_of_employees": line[1],
-            "employee_percentage": (line[1] / total_employees) * 100,
+            "employee_percentage": round(((line[1] / total_employees) * 100),3),
             "average_rating": await get_average_rating_for_serviceline(db, line[0], user_ids),
             "skill_percentages": await get_skill_percentages_by_serviceline(db, serviceline_name=line[0], user_ids=user_ids, skill_names=skill_names)  # Fetch skill percentages for each service line
         }
@@ -308,11 +308,13 @@ async def get_skill_percentages_by_serviceline(db: AsyncSession, serviceline_nam
             )
             total_skill_ratings = total_skill_ratings.scalar()
             average_rating = (total_skill_ratings / skill_count) if skill_count else 0
+
+            average_rating = round(average_rating, 3)
             
             skill_percentages.append({
                 "skill": skill_column.name,
                 "employee_count": skill_count,
-                "percentage": (skill_count / total_serviceline_employees) * 100,
+                "percentage": round((skill_count / total_serviceline_employees) * 100, 3),
                 "skill_average_rating": average_rating,
                 "rating_percentages": await get_skill_rating_percentages(db, serviceline_name, skill_column.name, user_ids)
             })
@@ -342,7 +344,7 @@ async def get_skill_rating_percentages(db: AsyncSession, serviceline_name: str, 
         skill_rating_percentages.append({
             "rating": rating,
             "count_of_employees": count,
-            "percentage_of_rating": (count / total_serviceline_employees) * 100
+            "percentage_of_rating": round((count / total_serviceline_employees) * 100, 3)
         })
     
     return skill_rating_percentages
@@ -366,7 +368,11 @@ async def get_average_rating_for_serviceline(db: AsyncSession, serviceline_name:
             total_ratings += sum_ratings or 0
             total_count += count_ratings or 0
 
-    return (total_ratings / total_count) if total_count else 0
+    average_rating = (total_ratings / total_count) if total_count else 0
+
+    average_rating = round(average_rating, 3)
+
+    return average_rating
 
 async def fetch_service_line_percentage(
     db: AsyncSession,
@@ -394,7 +400,7 @@ async def fetch_service_line_percentage(
         {
             "serviceline": line[0],
             "employees": line[1],
-            "percentage_of_employees": (line[1] / total_employees) * 100,
+            "percentage_of_employees": round(((line[1] / total_employees) * 100),3),
             "average_rating_of_serviceline": await get_average_rating_for_serviceline(db, line[0], user_ids),
         }
         for line in serviceline_counts
