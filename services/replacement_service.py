@@ -44,35 +44,62 @@ async def find_nearest_matches(
     employees_with_skills: List[Dict[str, Any]],
     overall_avg_rating: Decimal,
     skill_avg_rating: Dict[str, float],
-    name:Optional[str]=None
+    name: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    import json
-    with open('services/skill_mapping.json', 'r') as file:
-        skill_mapping = json.load(file)
-
-    
     nearest_matches = []
+
     for employee in employees_with_skills:
-        if employee['average_rating'] >= overall_avg_rating and (name is None or employee['name'] not in name) :
+        if name is None or employee['name'] not in name:
             matching_skills = 0
-            match={}
+            match = {}
+            skill_score = 0
+            total_skill_ratings = 0
+            matched_skill_ratings = 0
+
             for skill_name, skill_value in employee['skills'].items():
-                mapped_skill_name = skill_mapping.get(skill_name.lower())
+                mapped_skill_name = skill_name
                 avg_rating = skill_avg_rating.get(mapped_skill_name, 0)
-                if mapped_skill_name and avg_rating > 0 and skill_value >= avg_rating:
+
+                if mapped_skill_name in skill_avg_rating.keys() and skill_value != 0 and avg_rating != 0:
                     matching_skills += 1
-                    match[skill_name]=skill_value
+                    match[skill_name] = skill_value
+                    total_skill_ratings += avg_rating
+                    matched_skill_ratings += avg_rating  # Summing the ratings of the matched skills
+                    skill_score += skill_value / avg_rating
+
             employee['matching_skills'] = matching_skills
-            employee["matched_skills"]=match
+            employee['matched_skills'] = match
+
             if matching_skills > 0:
-                # Calculate confidence score
-                confidence_score = (matching_skills / len(skill_avg_rating)) * (employee['average_rating'] / overall_avg_rating)
-                employee['confidence_score'] = confidence_score*100
+                # Calculate skill relevance
+                skill_relevance = (matching_skills / len(skill_avg_rating))
+
+                # Calculate average skill score
+                average_skill_score = skill_score / matching_skills if matching_skills > 0 else 0
+
+                # Calculate the average rating of the matched skills
+                avg_matched_skill_rating = matched_skill_ratings / matching_skills if matching_skills > 0 else 0
+
+                # Check if the employee has all required skills
+                has_all_skills = matching_skills == len(skill_avg_rating)
+                
+                # Calculate confidence score with emphasis on matching all required skills
+                confidence_score = (
+                    (1 if has_all_skills else 0) * 0.8 +  # High weight for having all required skills
+                    skill_relevance * 0.15 +  # Medium weight for skill relevance
+                    (avg_matched_skill_rating / overall_avg_rating) * 0.05  # Lower weight for matched skill ratings
+                )
+
+                employee['confidence_score'] = confidence_score * 100
                 nearest_matches.append(employee)
     
     # Sort by confidence score in descending order
     nearest_matches.sort(key=lambda x: x['confidence_score'], reverse=True)
     return nearest_matches[:10]
+
+
+
+
 
 async def process_employees_with_skills(
     employees: List[employeeModel],
