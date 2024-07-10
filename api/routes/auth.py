@@ -133,7 +133,6 @@ async def microsoft_callback(token_request: TokenRequest, db: Session = Depends(
 
     try:
         user_data = decode_token(token)
-        print(user_data)
         email = user_data.get("preferred_username")
         first_name = user_data.get("name")
         surname = " "
@@ -143,7 +142,6 @@ async def microsoft_callback(token_request: TokenRequest, db: Session = Depends(
         hashed_password = get_password_hash("12345678")
         # Check if user already  exists
         user = db.query(User).filter(User.email == email).first()
-        print(user)
         if not user:
             user = User(
                 email=email,
@@ -161,7 +159,10 @@ async def microsoft_callback(token_request: TokenRequest, db: Session = Depends(
             user.is_superuser = is_superuser
             db.commit()
 
-        access_token = create_access_token(sub=user.id)
+        access_token = create_access_token(sub=user.email)
+        refresh_token = create_refresh_token(sub=user.email)
+        token_in = TokenData(id=user.id, token=access_token, refresh_token=refresh_token, is_active=True)
+        crud.crud_token.token.create(db=db, token_in=token_in)
         return JSONResponse(content={"access_token": access_token}, status_code=status.HTTP_200_OK)
 
     except Exception as e:
