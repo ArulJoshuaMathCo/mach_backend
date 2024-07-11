@@ -64,7 +64,7 @@ async def find_nearest_matches(
                     matching_skills += 1
                     match[skill_name] = skill_value
                     total_skill_ratings += avg_rating
-                    matched_skill_ratings += avg_rating  # Summing the ratings of the matched skills
+                    matched_skill_ratings += skill_value  # Summing the ratings of the matched skills
                     skill_score += skill_value / avg_rating
 
             employee['matching_skills'] = matching_skills
@@ -79,7 +79,7 @@ async def find_nearest_matches(
 
                 # Calculate the average rating of the matched skills
                 avg_matched_skill_rating = matched_skill_ratings / matching_skills if matching_skills > 0 else 0
-
+                employee["matched_skills_avg"]= avg_matched_skill_rating if matching_skills>0 else 0
                 # Check if the employee has all required skills
                 has_all_skills = matching_skills == len(skill_avg_rating)
                 
