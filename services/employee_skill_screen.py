@@ -36,7 +36,7 @@ async def calculate_skill_avg_ratings_with_counts(
             employee_count = await run_in_executor(employee_count_query.scalar)
 
             if skill_avg_ratings[skill_column.name] is not None:
-                avg_rating = round(skill_avg_ratings[skill_column.name], 3)
+                avg_rating = round(skill_avg_ratings[skill_column.name], 2)
                 skill_avg_ratings_with_counts.append({
                     "skill_name": skill_column.name,
                     "average_rating": avg_rating,
@@ -78,8 +78,8 @@ async def calculate_skill_avg_ratings_with_count(
             
             employee_count = await run_in_executor(employee_count_query.scalar)
 
-             # Get count and average rating for each rating (1 to 5)
-            rating_counts_and_averages = []
+            # Get percentage of employees for each rating (1 to 5)
+            rating_counts_and_percentages = []
             for rating in range(1, 6):
                 rating_count_query = db.query(func.count(skill_column)).filter(
                     skill_column == rating,
@@ -88,25 +88,25 @@ async def calculate_skill_avg_ratings_with_count(
                 rating_count = await run_in_executor(rating_count_query.scalar)
 
                 if employee_count > 0:
-                    average_rating_for_rating = (rating_count * rating) / employee_count
+                    percentage_for_rating = (rating_count / employee_count) * 100
                 else:
-                    average_rating_for_rating = None
+                    percentage_for_rating = None
 
-                if average_rating_for_rating is not None:
-                    average_rating_for_rating = round(average_rating_for_rating, 3)
+                if percentage_for_rating is not None:
+                    percentage_for_rating = round(percentage_for_rating, 2)
 
-                rating_counts_and_averages.append({
+                rating_counts_and_percentages.append({
                     "rating": rating,
-                    "average_rating": average_rating_for_rating,
+                    "percentage": percentage_for_rating,
                     "employee_count": rating_count
                 })
 
             if skill_avg_ratings[skill_column.name] is not None:
                 skill_avg_ratings_with_counts.append({
                     "skill_name": skill_column.name,
-                    "average_rating": round(skill_avg_ratings[skill_column.name], 3),
+                    "average_rating": round(skill_avg_ratings[skill_column.name], 2),
                     "employee_count": employee_count,
-                    "rating_details": rating_counts_and_averages
+                    "rating_details": rating_counts_and_percentages
                 })
             else:
                 skill_avg_ratings_with_counts.append({

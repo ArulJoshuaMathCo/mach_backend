@@ -53,7 +53,7 @@ class SkillAverageRating(BaseModel):
 
 class Rating(BaseModel):
     rating: int
-    average_rating: float
+    percentage: float
     employee_count: int
 
 class SkillAverage(BaseModel):

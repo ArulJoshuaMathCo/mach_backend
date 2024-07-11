@@ -106,7 +106,7 @@ async def employees_skill_screen(
     user_ids = [employee.user_id for employee in rows]
     
     skill_avg_rating = await calculate_skill_avg_ratings(db, user_ids)
-    skill_avg_ratings = await calculate_skill_avg_ratings_with_counts(db, user_ids)
+    skill_avg_ratings = await calculate_skill_avg_ratings_with_count(db, user_ids)
     if not skill_avg_ratings:
         raise HTTPException(status_code=404, detail="No skill ratings found")
     
