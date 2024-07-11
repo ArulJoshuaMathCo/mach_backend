@@ -95,7 +95,7 @@ async def find_nearest_matches(
     
     # Sort by confidence score in descending order
     nearest_matches.sort(key=lambda x: x['confidence_score'], reverse=True)
-    return nearest_matches[:10]
+    return nearest_matches[1:11]
 
 
 
