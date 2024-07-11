@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func, or_
 from decimal import Decimal
@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncio
 from services.replacement_service import calculate_skill_avg_ratings
 from models.skills import Skills1
+from models.Employee import MACH_Employee
 from services.service import run_in_executor
 
 async def calculate_skill_avg_ratings_with_counts(
@@ -94,6 +95,8 @@ async def calculate_skill_avg_ratings_with_count(
 
                 if percentage_for_rating is not None:
                     percentage_for_rating = round(percentage_for_rating, 2)
+                else:
+                    percentage_for_rating = 0
 
                 rating_counts_and_percentages.append({
                     "rating": rating,
